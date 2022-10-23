@@ -1,95 +1,126 @@
-import keras
+import os
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+import cv2
+from tensorflow import keras
 from keras.utils.vis_utils import plot_model
 from matplotlib import pyplot as plt
-from tensorflow import keras
-from keras.models import Model
-from keras.layers import Input
-from keras.optimizers import SGD
-from keras.applications import EfficientNetB0
-from keras.applications import DenseNet169
-from keras.applications.vgg16 import VGG16
+from keras.models import Sequential
+from keras.applications import EfficientNetB0, DenseNet169, VGG16
+from keras.utils.np_utils import to_categorical
+from keras import layers, Model, Input
 import numpy as np
 import pandas as pd
 
-def load_dataset(net=True):
-    # Load and filter in Training/not Training data:
-    df = pd.read_csv('../../fer2013/fer2013.csv')
-    training = df.loc[df['Usage'] == 'Training']
-    testing = df.loc[df['Usage'] != 'Testing']
+data_path = '../../jaffedbase'
+dataset = 'jaffedbase'
+data_dir_list = os.listdir(data_path)
 
-    # x_train values:
-    x_train = np.zeros((training.shape[0], 48, 48))
-    for i, pixels in enumerate(training['pixels']):
-        x_train[i] = np.array(pixels.split(' ')).reshape((48, 48)).astype('float32')
-    
+img_rows=256
+img_cols=256
+num_channel=1
 
-    # x_test values:
-    x_test = np.zeros((testing.shape[0], 48, 48))
-    for i, pixels in enumerate(testing['pixels']):
-        x_test[i] = np.array(pixels.split(' ')).reshape((48, 48)).astype('float32')
+num_epoch=50
+
+img_data_list=[]
+
+
+#for dataset in data_dir_list:
+img_list=os.listdir(data_path+'/'+ dataset)
+print ('Loaded the images of dataset-'+'{}\n'.format(dataset))
+for img in img_list:
+    if img != '.DS_Store':
+        input_img=cv2.imread(data_path + '/'+ dataset + '/'+ img )
+        #print("image: "+ data_path + '/'+ dataset + '/'+ img + "\n")
+        input_img_resize=cv2.resize(input_img,(96,96))
+        img_data_list.append(input_img_resize)
         
+img_data = np.array(img_data_list)
+img_data = img_data.astype('float32')
+img_data = img_data/255
+img_data.shape
 
-    # y_train values:
-    y_train = training['emotion'].values
-    y_train = keras.utils.to_categorical(y_train, 7)
+num_classes = 7
 
-    # y_test values
-    y_test = testing['emotion'].values
-    y_test = keras.utils.to_categorical(y_test, 7)
+num_of_samples = img_data.shape[0]
+labels = np.ones((num_of_samples,),dtype='int64')
 
-    # Reshape data:
-    x_train = x_train.reshape(x_train.shape[0], 48, 48, 1)
-    x_test = x_test.reshape(x_test.shape[0], 48, 48, 1)
+labels[0:29]=0 #30
+labels[30:59]=1 #29
+labels[60:92]=2 #32
+labels[93:124]=3 #31
+labels[125:155]=4 #30
+labels[156:187]=5 #31
+labels[188:]=6 #30
 
-    return (x_train, y_train), (x_test, y_test)
+names = ['angry','disgust','fear','happy','neutral','sad','surprise']
 
-# load the data
-(x_train, y_train) , (x_test, y_test) = load_dataset()
+def getLabel(id):
+    return ['angry','disgust','fear','happy','neutral','sad','surprise'][id]
+
+# convert class labels to on-hot encoding
+y = to_categorical(labels, num_classes)
+
+
+#Shuffle the dataset
+x,y = shuffle(img_data,y, random_state=2)
+# Split the dataset
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.15, random_state=2)
+
+input_shape=img_data[0].shape
 
 def Model_EfficientNetB0(n_classes=7):
 
-    x = Input(shape=(48, 48, 1))
-    y = EfficientNetB0(include_top=False, weights='imagenet', input_tensor=x, input_shape=(48, 48, 1), pooling='avg')(x)
-    
-    # Create model:
-    model = Model(x, y)
+    x = Input(shape=input_shape)
+    y = EfficientNetB0(
+        include_top=True,
+        weights='imagenet',
+        input_tensor=None,
+        input_shape=None,
+        pooling=None,
+        classes=1000,
+        classifier_activation="softmax"
+        ) (x)
+    model = Model(inputs=x, outputs=y)
 
     return model
 
+
 def Model_DenseNet169(n_classes=7):
 
-    x = Input(shape=(48, 48, 1))
-    y = DenseNet169(include_top=False, weights='imagenet', input_tensor=x, input_shape=(48, 48, 1), pooling='avg')(x)
-    
-    # Create model:
-    model = Model(x, y)
+    x = Input(shape=input_shape)
+    y = DenseNet169(include_top=False, weights='imagenet', input_tensor=x, pooling='avg')(x)
+    model = Model(inputs=x, outputs=y)
 
     return model
 
 def Model_VGG16(n_classes=7):
 
-    x = Input(shape=(48, 48, 1))
-    y = VGG16(include_top=False, weights='imagenet', input_tensor=x, input_shape=(48, 48, 1), pooling='max')(x)
-    
-    # Create model:
-    model = Model(x, y)
+    x = Input(shape=input_shape)
+    y = VGG16(include_top=False, weights='imagenet', input_tensor=x, pooling='avg')(x)
+    model = Model(inputs=x, outputs=y)
 
     return model
-    
+
+
 EPOCHS = 50
 BATCH = 64
 LRATE = 1e-4
 
+
 # Instance model
-efficientNetB0 = Model_EfficientNetB0()
+#create model
+efficientNetB0= Sequential()
+efficientNetB0.add(Model_EfficientNetB0())
 efficientNetB0.summary()
 plot_model(efficientNetB0, to_file='model_efficientNetB0_fer_plot.png', show_shapes=True, show_layer_names=True)
 #compile model using accuracy to measure model performance
 efficientNetB0.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 #train the model
-efficientNetB0_history = efficientNetB0.fit(x_train, y_train,
-                   validation_data=(x_test, y_test),
-                   epochs=EPOCHS, batch_size=BATCH)
+efficientNetB0_history = efficientNetB0.fit(x_train, y_train, epochs=EPOCHS, batch_size=BATCH, validation_data=(x_test, y_test))
+
+
 
 # Instance model
 denseNet169 = Model_DenseNet169()
@@ -98,9 +129,7 @@ plot_model(denseNet169, to_file='model_denseNet169_fer_plot.png', show_shapes=Tr
 #compile model using accuracy to measure model performance
 denseNet169.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 #train the model
-denseNet169_history = denseNet169.fit(x_train, y_train,
-                   validation_data=(x_test, y_test),
-                   epochs=EPOCHS, batch_size=BATCH)
+denseNet169_history = denseNet169.fit(x_train, y_train, epochs=EPOCHS, batch_size=BATCH, validation_data=(x_test, y_test))
 
 # Instance model
 vgg16 = Model_VGG16()
@@ -109,9 +138,7 @@ plot_model(vgg16, to_file='model_vgg16_fer_plot.png', show_shapes=True, show_lay
 #compile model using accuracy to measure model performance
 vgg16.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 #train the model
-vgg16_history = vgg16.fit(x_train, y_train,
-                   validation_data=(x_test, y_test),
-                   epochs=EPOCHS, batch_size=BATCH)
+vgg16_history = vgg16.fit(x_train, y_train, epochs=EPOCHS, batch_size=BATCH, validation_data=(x_test, y_test))
 
 
 def plot_efficientNetB0_loss(history):
@@ -138,6 +165,7 @@ def plot_efficientNetB0_accuracy(history):
     plt.legend(['Train', 'Test'], loc='upper left')
     plt.savefig('accuracy_efficientNetB0_fer.png', dpi=300)
     plt.show()
+
 
 def plot_denseNet169_loss(history):
     plt.style.use("ggplot")
@@ -198,6 +226,8 @@ plot_vgg16_loss(vgg16_history)
 plot_efficientNetB0_accuracy(efficientNetB0_history)
 plot_denseNet169_accuracy(denseNet169_history)
 plot_vgg16_accuracy(vgg16_history)
+
+
 
 #save model and architecture to single file
 efficientNetB0.save("model_efficientNetB0_fer.h5")

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from tensorflow import keras
 from keras.preprocessing.image import ImageDataGenerator
-from keras.applications import EfficientNetB0
+from keras.applications import VGG16, EfficientNetB0
 from keras.layers import Dense, Flatten
 from keras.models import Model
 from keras.utils import plot_model
@@ -40,29 +40,33 @@ test_dataset = test_datagen.flow_from_directory(directory = '../../input/fer2013
                                                   batch_size = 64)                            
 
 IMAGE_SIZE = [48, 48]
-base_model = EfficientNetB0(input_shape=IMAGE_SIZE + [3],include_top=False,weights="imagenet")
+eff_model = EfficientNetB0(input_shape=IMAGE_SIZE + [3],include_top=False,weights="imagenet")
+vgg16_model = VGG16(input_shape=IMAGE_SIZE + [3],include_top=False,weights="imagenet")
 
-for layer in base_model.layers[:-4]:
+for layer in eff_model.layers[:-4]:
     layer.trainable=False
 
-x = Flatten()(base_model.output)
+for layer in vgg16_model.layers[:-4]:
+    layer.trainable=False
+
+x = Flatten()(eff_model.output)
+x = Flatten()(vgg16_model.output)
 prediction = Dense(7, activation='softmax')(x)
-model = Model(inputs=base_model.input, outputs=prediction)
+model = Model(inputs=eff_model.input, outputs=prediction)
 
 model.summary()
 
-plot_model(model, to_file='efficientNetB0_FER.png', show_shapes=True,show_layer_names=True)
-Image(filename='efficientNetB0_FER.png') 
+plot_model(model, to_file='efficientNetB0_vgg16_FER.png', show_shapes=True,show_layer_names=True)
+Image(filename='efficientNetB0_vgg16_FER.png') 
 
 model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
 
 history=model.fit(train_dataset,validation_data=valid_dataset,epochs = 50,verbose = 1)
 
 #save model
-model.save('efficientNetB0_FER.h5')
+model.save('efficientNetB0_vgg16_FER.h5')
 
 plt.plot(history.history['accuracy'], label='accuracy')
 plt.legend()
 plt.show()
-plt.savefig('accuracy_efficientNetB0_FER.png')
-
+plt.savefig('accuracy_efficientNetB0_vgg16_FER.png')

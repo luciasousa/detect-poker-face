@@ -14,11 +14,6 @@ from keras.preprocessing import image
 from keras.utils import plot_model
 from IPython.display import Image
 from keras.metrics import BinaryAccuracy, Precision, Recall, AUC
-#import deeplake
-
-#ds_train = deeplake.load('hub://activeloop/fer2013-train')
-#ds_test = deeplake.load('hub://activeloop/fer2013-test')
-#ds_priv_test = deeplake.load('hub://activeloop/fer2013-private-test')
 
 train_datagen = ImageDataGenerator( rescale = 1./255,
                                     validation_split = 0.2,                         

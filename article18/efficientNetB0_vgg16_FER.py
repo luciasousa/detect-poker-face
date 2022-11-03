@@ -7,6 +7,7 @@ from keras.layers import Dense, Flatten
 from keras.models import Model
 from keras.utils import plot_model
 from IPython.display import Image
+import numpy as np
 
 train_datagen = ImageDataGenerator( rescale = 1./255,
                                     validation_split = 0.2,                         
@@ -44,32 +45,27 @@ test_dataset = test_datagen.flow_from_directory(directory = '../../input/fer2013
                                                   class_mode = 'categorical',
                                                   batch_size = 64)                            
 
-IMAGE_SIZE = [96, 96]
-eff_model = EfficientNetB0(input_shape=IMAGE_SIZE + [3],include_top=False,weights="imagenet")
-vgg16_model = VGG16(input_shape=IMAGE_SIZE + [3],include_top=False,weights="imagenet")
+#load efficientNetB0_FER.h5
+efficientNetB0_FER = keras.models.load_model('efficientNetB0_FER.h5')
+efficientNetB0_FER._name = 'model1'
+#load vgg16_FER.h5
+vgg16_FER = keras.models.load_model('vgg16_FER.h5')
+vgg16_FER._name = 'model2'
 
-for layer in eff_model.layers[:-4]:
-    layer.trainable=False
+models = [efficientNetB0_FER, vgg16_FER]
 
-for layer in vgg16_model.layers[:-4]:
-    layer.trainable=False
+model_input = keras.Input(shape=(96, 96, 3))
+model_outputs = [model(model_input) for model in models]
+ensemble_output = layers.Average()(model_outputs)
+ensemble_model = keras.Model(inputs=model_input, outputs=ensemble_output)
 
-x = Flatten()(eff_model.output)
-x = Flatten()(vgg16_model.output)
-prediction = Dense(7, activation='softmax')(x)
-model = Model(inputs=eff_model.input, outputs=prediction)
-
-model.summary()
-
-plot_model(model, to_file='efficientNetB0_vgg16_FER.png', show_shapes=True,show_layer_names=True)
-Image(filename='efficientNetB0_vgg16_FER.png') 
-
-model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
-
-history=model.fit(train_dataset,validation_data=valid_dataset,epochs = 50,verbose = 1)
+#compile the model
+ensemble_model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+#history
+history = ensemble_model.fit(train_dataset, epochs=50, validation_data=valid_dataset)
 
 #save model
-model.save('efficientNetB0_vgg16_FER.h5')
+ensemble_model.save('efficientNetB0_vgg16_FER.h5')
 
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])

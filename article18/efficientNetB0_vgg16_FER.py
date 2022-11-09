@@ -46,10 +46,10 @@ test_dataset = test_datagen.flow_from_directory(directory = '../../input/fer2013
                                                   batch_size = 64)                            
 
 #load efficientNetB0_FER.h5
-efficientNetB0_FER = keras.models.load_model('efficientNetB0_FER.h5')
+efficientNetB0_FER = keras.models.load_model('./models/efficientNetB0_FER.h5')
 efficientNetB0_FER._name = 'model1'
 #load vgg16_FER.h5
-vgg16_FER = keras.models.load_model('vgg16_FER.h5')
+vgg16_FER = keras.models.load_model('./models/vgg16_FER.h5')
 vgg16_FER._name = 'model2'
 
 models = [efficientNetB0_FER, vgg16_FER]
@@ -62,15 +62,14 @@ ensemble_model = keras.Model(inputs=model_input, outputs=ensemble_output)
 #compile the model
 ensemble_model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
 #history
-history = ensemble_model.fit(train_dataset, epochs=50, validation_data=valid_dataset)
+history = ensemble_model.fit(train_dataset, epochs=50, validation_data=valid_dataset, shuffle=True)
 
 #save model
-ensemble_model.save('efficientNetB0_vgg16_FER.h5')
+ensemble_model.save('models/efficientNetB0_vgg16_FER.h5')
 
 plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('accuracy_efficientNetB0_vgg16_FER.png')
+plt.legend(['train'], loc='upper left')
+plt.savefig('accuracy_plots/accuracy_efficientNetB0_vgg16_FER.png')

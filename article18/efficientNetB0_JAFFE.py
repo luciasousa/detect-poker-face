@@ -59,9 +59,9 @@ def getLabel(id):
 y = keras.utils.to_categorical(labels, num_classes)
 
 #shuffle the dataset
-x,y = shuffle(img_data,y, random_state=2)
+#x,y = shuffle(img_data,y, random_state=2)
 #split the dataset
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=2)
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.1, random_state=2, shuffle=True)
 
 IMAGE_SIZE = [96, 96]
 base_model = EfficientNetB0(input_shape=IMAGE_SIZE + [3],include_top=False,weights="imagenet")
@@ -75,21 +75,20 @@ model = Model(inputs=base_model.input, outputs=prediction)
 
 model.summary()
 
-plot_model(model, to_file='efficientNetB0_JAFFE.png', show_shapes=True,show_layer_names=True)
-Image(filename='efficientNetB0_JAFFE.png') 
+plot_model(model, to_file='models/efficientNetB0_JAFFE.png', show_shapes=True,show_layer_names=True)
+Image(filename='models/efficientNetB0_JAFFE.png') 
 
 model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
 
 # Training
-history = model.fit(x_train, y_train, batch_size=7, epochs=50, verbose=1, validation_data=(x_test, y_test))
+history = model.fit(x_train, y_train, batch_size=7, epochs=50, verbose=1, validation_data=(x_test, y_test), shuflle=True)
 
 #save model
-model.save('efficientNetB0_JAFFE.h5')
+model.save('models/efficientNetB0_JAFFE.h5')
 
 plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('accuracy_efficientNetB0_JAFFE.png')
+plt.legend(['train'], loc='upper left')
+plt.savefig('accuracy_plots/accuracy_efficientNetB0_JAFFE.png')

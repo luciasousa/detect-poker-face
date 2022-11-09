@@ -70,10 +70,10 @@ for layer in base_model.layers[:-4]:
     layer.trainable=False
 
 #load efficientNetB0_JAFFE.h5
-efficientNetB0_JAFFE = keras.models.load_model('efficientNetB0_JAFFE.h5')
+efficientNetB0_JAFFE = keras.models.load_model('./models/efficientNetB0_JAFFE.h5')
 efficientNetB0_JAFFE._name = 'model3'
 #load vgg16_JAFFE.h5
-vgg16_JAFFE = keras.models.load_model('vgg16_JAFFE.h5')
+vgg16_JAFFE = keras.models.load_model('./models/vgg16_JAFFE.h5')
 vgg16_JAFFE._name = 'model4'
 
 models = [efficientNetB0_JAFFE, vgg16_JAFFE]
@@ -86,15 +86,14 @@ out_model._name = 'ensemble'
 #compile the model
 out_model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
 #history
-history = out_model.fit(x_train, y_train, batch_size=7, epochs=50, verbose=1, validation_data=(x_test, y_test))
+history = out_model.fit(x_train, y_train, batch_size=7, epochs=50, verbose=1, validation_data=(x_test, y_test), shuffle=True)
 
 #save model
-out_model.save('efficientNetB0_vgg16_JAFFE.h5')
+out_model.save('models/efficientNetB0_vgg16_JAFFE.h5')
 
 plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('accuracy_efficientNetB0_vgg16_JAFFE.png')
+plt.legend(['train'], loc='upper left')
+plt.savefig('accuracy_plots/accuracy_efficientNetB0_vgg16_JAFFE.png')

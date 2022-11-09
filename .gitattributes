@@ -1,3 +1,4 @@
 article18/vgg16_FER.h5 filter=lfs diff=lfs merge=lfs -text
 article18/efficientNetB0_vgg16_FER.h5 filter=lfs diff=lfs merge=lfs -text
 article18/*.h5 filter=lfs diff=lfs merge=lfs -text
+article18/models/*.h5 filter=lfs diff=lfs merge=lfs -text

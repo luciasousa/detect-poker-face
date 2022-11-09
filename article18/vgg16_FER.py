@@ -56,20 +56,19 @@ model = Model(inputs=base_model.input, outputs=prediction)
 
 model.summary()
 
-plot_model(model, to_file='vgg16_FER.png', show_shapes=True,show_layer_names=True)
-Image(filename='vgg16_FER.png') 
+plot_model(model, to_file='models/vgg16_FER.png', show_shapes=True,show_layer_names=True)
+Image(filename='models/vgg16_FER.png') 
 
 model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
 
-history=model.fit(train_dataset,validation_data=valid_dataset,epochs = 50,verbose = 1)
+history=model.fit(train_dataset,validation_data=valid_dataset,epochs = 50,verbose = 1, shuffle=True)
 
 #save model 
-model.save('vgg16_FER.h5')
+model.save('models/vgg16_FER.h5')
 
 plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('accuracy_vgg16_FER.png')
+plt.legend(['train'], loc='upper left')
+plt.savefig('accuracy_plots/accuracy_vgg16_FER.png')

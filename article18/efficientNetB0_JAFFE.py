@@ -81,7 +81,7 @@ Image(filename='models/efficientNetB0_JAFFE.png')
 model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
 
 # Training
-history = model.fit(x_train, y_train, batch_size=7, epochs=50, verbose=1, validation_data=(x_test, y_test), shuflle=True)
+history = model.fit(x_train, y_train, batch_size=7, epochs=50, verbose=1, validation_data=(x_test, y_test), shuffle=True)
 
 #save model
 model.save('models/efficientNetB0_JAFFE.h5')

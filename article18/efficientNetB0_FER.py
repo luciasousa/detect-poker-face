@@ -69,9 +69,9 @@ history = model.fit(train_dataset,validation_data=valid_dataset,epochs=50,verbos
 #save model
 model.save('models/efficientNetB0_FER.h5')
 
-plt.plot(history.history['accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train'], loc='upper left')
-plt.savefig('accuracy_plots/accuracy_efficientNetB0_FER.png')
+#evaluate the model
+test_loss, test_acc = model.evaluate(test_dataset, verbose=2)
+#print test accuracy
+print('Test accuracy:', test_acc)
+print('Train accuracy: ', history.history['accuracy'][-1])
+print('Validation accuracy: ', history.history['val_accuracy'][-1])

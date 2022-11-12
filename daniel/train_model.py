@@ -20,8 +20,6 @@ neutral_instances = 0
 labels = sorted(data_dir_list)
 num_classes = 7
 
-
-
 img_data_list = []
 #array x with all images
 for label in labels:
@@ -61,7 +59,7 @@ y = keras.utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
 print(y.shape)
 #split the dataset
-x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.1, random_state=8)
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.1, random_state=2)
 
 IMAGE_SIZE = [28, 28]
 
@@ -83,7 +81,7 @@ model.summary()
 plot_model(model, to_file='model_plot.png', show_shapes=True,show_layer_names=True)
 Image(filename='model_plot.png') 
 
-model.compile(optimizer='Adagrad', loss='categorical_crossentropy',metrics=['accuracy'])
+model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
 
 # Training
 #shuffle the dataset after each epoch

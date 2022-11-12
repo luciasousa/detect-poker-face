@@ -67,9 +67,9 @@ history = ensemble_model.fit(train_dataset, epochs=50, validation_data=valid_dat
 #save model
 ensemble_model.save('models/efficientNetB0_vgg16_FER.h5')
 
-plt.plot(history.history['accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train'], loc='upper left')
-plt.savefig('accuracy_plots/accuracy_efficientNetB0_vgg16_FER.png')
+#evaluate the model
+test_loss, test_acc = model.evaluate(test_dataset, verbose=2)
+#print test accuracy
+print('Test accuracy:', test_acc)
+print('Train accuracy: ', history.history['accuracy'][-1])
+print('Validation accuracy: ', history.history['val_accuracy'][-1])

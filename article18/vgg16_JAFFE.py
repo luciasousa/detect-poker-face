@@ -81,7 +81,14 @@ y = keras.utils.to_categorical(labels, num_classes)
 # shuffle the dataset
 x,y = shuffle(img_data,y, random_state=2)
 # split the dataset
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=2)
+#x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=2)
+
+x_train, x_rem, y_train, y_rem = train_test_split(x,y, train_size=0.8)
+
+# Now since we want the valid and test size to be equal (10% each of overall data). 
+# we have to define valid_size=0.5 (that is 50% of remaining data)
+test_size = 0.5
+x_valid, x_test, y_valid, y_test = train_test_split(x_rem,y_rem, test_size=0.5)
 
 IMAGE_SIZE = [96, 96]
 base_model = VGG16(input_shape=IMAGE_SIZE + [3],include_top=False,weights="imagenet")
@@ -114,8 +121,9 @@ model.save('models/vgg16_JAFFE.h5')
 #print test, train and validation accuracy
 #evaluate the model
 score = model.evaluate(x_test, y_test, verbose=0, batch_size=4)
-#print test accuracy
 print('Test accuracy:', score[1])
-print('Train accuracy: ', history.history['accuracy'][-1])
-print('Validation accuracy: ', history.history['val_accuracy'][-1])
+score = model.evaluate(x_train, y_train, verbose=0, batch_size=4)
+print('Train accuracy:', score[1])
+score = model.evaluate(x_valid, y_valid, verbose=0, batch_size=4)
+print('Validation accuracy:', score[1])
 

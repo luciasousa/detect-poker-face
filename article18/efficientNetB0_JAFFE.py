@@ -6,13 +6,14 @@ import numpy as np
 from tensorflow import keras
 from keras import layers
 from keras.preprocessing.image import ImageDataGenerator
-from keras.applications.efficientnet import EfficientNetB0
+from keras.applications import EfficientNetB0
 from keras.layers import Dense, Flatten
 from keras.models import Model
 from keras.utils import plot_model
 from IPython.display import Image
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
+from fast_ml.model_development import train_valid_test_split
 from sklearn.metrics import accuracy_score
 
 #define datapath
@@ -82,7 +83,15 @@ y = keras.utils.to_categorical(labels, num_classes)
 # shuffle the dataset
 x,y = shuffle(img_data,y, random_state=2)
 # split the dataset
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=2)
+#x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=2)
+
+# In the first step we will split the data in training and remaining dataset
+x_train, x_rem, y_train, y_rem = train_test_split(x,y, train_size=0.8)
+
+# Now since we want the valid and test size to be equal (10% each of overall data). 
+# we have to define valid_size=0.5 (that is 50% of remaining data)
+test_size = 0.5
+x_valid, x_test, y_valid, y_test = train_test_split(x_rem,y_rem, test_size=0.5)
 
 IMAGE_SIZE = [96, 96]
 # create the base pre-trained model
@@ -108,15 +117,16 @@ for layer in base_model.layers:
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 # train the model on the new data for a few epochs
-history = model.fit(x_train, y_train, epochs=50, batch_size=4, validation_data=(x_test, y_test), shuffle=True)
+history = model.fit(x_train, y_train, epochs=50, batch_size=4, validation_data=(x_valid, y_valid))
 
 #save model
 model.save('models/efficientNetB0_JAFFE.h5')
 #print test, train and validation accuracy
 #evaluate the model
 score = model.evaluate(x_test, y_test, verbose=0, batch_size=4)
-#print test accuracy
 print('Test accuracy:', score[1])
-print('Train accuracy: ', history.history['accuracy'][-1])
-print('Validation accuracy: ', history.history['val_accuracy'][-1])
+score = model.evaluate(x_train, y_train, verbose=0, batch_size=4)
+print('Train accuracy:', score[1])
+score = model.evaluate(x_valid, y_valid, verbose=0, batch_size=4)
+print('Validation accuracy:', score[1])
 

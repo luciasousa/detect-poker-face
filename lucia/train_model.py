@@ -1,171 +1,159 @@
-import keras
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
-from keras.preprocessing.image import ImageDataGenerator
-from keras.utils.vis_utils import plot_model
-from matplotlib import pyplot as plt
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import Flatten
-from tensorflow.keras.layers import concatenate
-from tensorflow.keras.layers import MaxPooling2D
-from tensorflow.keras.optimizers import SGD
+import os
+from cv2 import resize
+import cv2
+import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+from tensorflow import keras
+from keras import layers
+from keras.preprocessing.image import ImageDataGenerator
+from keras.layers import Dense, Flatten
+from keras.models import Model
+from keras.utils import plot_model
+from IPython.display import Image
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
 
-def load_dataset(net=True):
-    """Utility function to load the FER2013 dataset.
-    
-    It returns the formated tuples (x_train, y_train) , (x_test, y_test).
+#define datapath
+#datapath = '../../jaffe/jaffedbase'
+datapath = '../../fer_binary/fer'
+data_dir_list = os.listdir(datapath)
+labels = sorted(data_dir_list)
+img_data_list = []
+img_names = []
 
-    Parameters
-    ==========
-    net : boolean
-        This parameter is used to reshape the data from images in 
-        (cols, rows, channels) format. In case that it is False, a standard
-        format (cols, rows) is used.
-    """
 
-    # Load and filter in Training/not Training data:
-    df = pd.read_csv('../../fer2013/fer2013.csv')
-    training = df.loc[df['Usage'] == 'Training']
-    testing = df.loc[df['Usage'] != 'Testing']
 
-    # x_train values:
-    x_train = training[['pixels']].values
-    x_train = [np.fromstring(e[0], dtype=int, sep=' ') for e in x_train]
-    if net:
-        x_train = [e.reshape((48, 48, 1)).astype('float32') for e in x_train]
+#read all images into array
+for label in labels:
+    img_list=os.listdir(datapath+'/'+ label+'/')
+    print ('Loaded the images of dataset-'+'{}\n'.format(label))
+    for img in img_list:
+        input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+        #convert to gray
+        input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+        input_img_resize=cv2.resize(input_img,(48,48))
+        img_data_list.append(input_img_resize)
+        img_names.append(img)
+
+img_data = np.array(img_data_list)
+img_data = img_data.astype('float32')
+img_data = img_data/255
+img_data.shape
+
+num_classes = 2
+num_of_samples = img_data.shape[0]
+
+names = ['neutral','not neutral']
+
+def getLabel(id):
+    return ['neutral','not neutral'][id]
+
+# convert class labels to on-hot encoding
+labels_int = np.ones((num_of_samples,),dtype='int64')
+
+#split the name of the image to get the label and check if equal to 'NE'
+'''
+for i in range(num_of_samples):
+    name = img_names[i]
+    label = name.split('.')[1]
+    result = ''.join([i for i in label if not i.isdigit()])
+    if result == 'NE':
+        labels_int[i] = 0
     else:
-        x_train = [e.reshape((48, 48)) for e in x_train]
-    x_train = np.array(x_train)
+        labels_int[i] = 1
+'''
 
-    # x_test values:
-    x_test = testing[['pixels']].values
-    x_test = [np.fromstring(e[0], dtype=int, sep=' ') for e in x_test]
-    if net:
-        x_test = [e.reshape((48, 48, 1)).astype('float32') for e in x_test]
-    else:
-        x_test = [e.reshape((48, 48)) for e in x_test]
-    x_test = np.array(x_test)
-
-    # y_train values:
-    y_train = training[['emotion']].values
-    y_train = keras.utils.to_categorical(y_train)
-
-    # y_test values
-    y_test = testing[['emotion']].values
-    y_test = keras.utils.to_categorical(y_test)
-
-    return (x_train, y_train) , (x_test, y_test)
-
-# load the data
-(x_train, y_train) , (x_test, y_test) = load_dataset()
-
-def ResidualBlock(prev_layer):
-    """Residual block from the EDNN model for FER by Deepak Kumar Jaina,
-    Pourya Shamsolmoalib & Paramjit Sehdev, as it appears in "Extended 
-    deep neural network for facial emotion recognition", 2019.
-    """
-    conv_1 = Conv2D(64, (1, 1))(prev_layer)
-    conv_2 = Conv2D(64, (3, 3), padding="same")(conv_1)
-    shortc = concatenate([conv_1, conv_2], axis=-1)
-    conv_3 = Conv2D(128, (3, 3), padding="same")(shortc)
-    conv_4 = Conv2D(256, (1, 1))(conv_3)
-    output = concatenate([conv_4, prev_layer], axis=-1)
+#for images in folder 'emotion' label 1 and folder 'neutral' label 0
+for label in labels:
+    img_list=os.listdir(datapath+'/'+ label+'/')
+    for i in range(len(img_list)):
+        if label == 'neutral':
+            labels_int[i] = 0
+        else:
+            labels_int[i] = 1
     
-    return output
+y = keras.utils.to_categorical(labels_int, num_classes)
+print(img_data.shape)
+print(y.shape)
+
+#split the data into train and test and validation
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=8)
+x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.25, shuffle=True, random_state=8)
 
 
-def EDNN(n_classes=7):
-    """
-    EDNN model for FER by Deepak Kumar Jaina, Pourya Shamsolmoalib &
-    Paramjit Sehdev, as it appears in "Extended deep neural network for 
-    facial emotion recognition", 2019.
-    """
+IMAGE_SIZE = [48,48]
 
-    x = Input(shape=(48, 48, 1))
-    y = Conv2D(32, (5, 5), input_shape=(48, 48, 1), strides=(2, 2), 
-               data_format='channels_last')(x)
-    y = MaxPooling2D(pool_size=(2, 2))(y)
-    y = Conv2D(64, (3, 3), strides=(1, 1))(y)
-    y = ResidualBlock(y)
-    y = Conv2D(128, (3, 3), strides=(1, 1), padding="same")(y)
-    y = MaxPooling2D(pool_size=(2, 2))(y)
-    y = Conv2D(128, (3, 3), strides=(1, 1))(y)
-    y = ResidualBlock(y)
-    y = Conv2D(256, (3, 3), strides=(1, 1), padding="same")(y)
-    y = MaxPooling2D(pool_size=(2, 2))(y)
-    y = Conv2D(512, (3, 3), strides=(1, 1), padding="same")(y)
-    y = Flatten()(y)
-    y = Dense(1024, activation='relu')(y)
-    y = Dropout(0.2)(y)
-    y = Dense(512, activation='relu')(y)
-    y = Dropout(0.2)(y)
-    y = Dense(n_classes, activation='softmax')(y)
-    
-    # Create model:
-    model = Model(x, y)
+model = keras.Sequential(
+    [
+        keras.Input(shape=(48,48,1)),
+        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Flatten(),
+        layers.Dropout(0.5),
+        layers.Dense(num_classes, activation="softmax"),
+    ]
+)
 
-    # Compile model:
-    opt = SGD(lr=LRATE, momentum=0.9, decay=LRATE/EPOCHS)
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=opt, metrics=['accuracy'])
+#set all layers to not trainable
+for layer in model.layers:
+    layer.trainable = True
 
-    return model
-    
-EPOCHS = 5
-BATCH = 64
-LRATE = 1e-4
+#plot the model
+plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+Image(retina=True, filename='model_plot.png')
 
-# Instance model
-ednn = EDNN()
-ednn.summary()
-plot_model(ednn, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
-#compile model using accuracy to measure model performance
-ednn.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+#compile the model
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+model.summary()
+
 #train the model
-history = ednn.fit(x_train, y_train,
-                   validation_data=(x_test, y_test),
-                   epochs=EPOCHS, batch_size=BATCH)
+model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
 
-def plot_loss(history):
-    plt.style.use("ggplot")
-    plt.figure(figsize=(8, 4))
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title("Model's training loss")
-    plt.xlabel("Epoch #")
-    plt.ylabel("Loss")
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('loss.png', dpi=300)
-    plt.show()
+#save the model
+model.save('../../model_lucia.h5')
+
+#evaluate the model
+score = model.evaluate(x_test, y_test, verbose=0)
+print("Test loss:", score[0])
+print("Test accuracy:", score[1])
+
+#print train accuracy
+score = model.evaluate(x_train, y_train, verbose=0)
+print("Train loss:", score[0])
+print("Train accuracy:", score[1])
+
+#print validation accuracy
+score = model.evaluate(x_val, y_val, verbose=0)
+print("Validation loss:", score[0])
+print("Validation accuracy:", score[1])
+
+#trainable=true
+#Test loss: 0.438470721244812
+#Test accuracy: 0.8322652578353882
+#Train loss: 0.3457871079444885
+#Train accuracy: 0.8515498638153076
+#Validation loss: 0.4139709770679474
+#Validation accuracy: 0.8399381041526794
+
+#trainable=false
+#Test loss: 0.6208266615867615
+#Test accuracy: 0.9988855123519897
+#Train loss: 0.6208982467651367
+#Train accuracy: 0.9979564547538757
+#Validation loss: 0.6208663582801819
+#Validation accuracy: 0.9987459778785706
 
 
-def plot_accuracy(history):
-    plt.style.use("ggplot")
-    plt.figure(figsize=(8, 4))
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title("Model's training accuracy")
-    plt.xlabel("Epoch #")
-    plt.ylabel("Accuracy")
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('accuracy.png', dpi=300)
-    plt.show()
-    
-
-# Plot loss:
-plot_loss(history)
-
-# Plot accuracy:
-plot_accuracy(history)
-
-#save model and architecture to single file
-ednn.save("model.h5")
-print("Saved model to disk")
-
+#plot the names of the images with the predicted label and the actual label
+#plot 10 images
+fig=plt.figure(figsize=(8, 8))
+columns = 5
+rows = 2
+for i in range(1, columns*rows +1):
+    fig.add_subplot(rows, columns, i)
+    plt.title('Predicted: '+getLabel(np.argmax(model.predict(x_test[i].reshape(1,48,48,1))))+' Actual: '+getLabel(np.argmax(y_test[i])))
+    #save the plot into a file
+    plt.imshow(x_test[i].reshape(48,48),cmap='gray')
+plt.savefig('plot.png')

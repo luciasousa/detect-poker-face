@@ -111,7 +111,7 @@ model.summary()
 model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
 
 #save the model
-model.save('../../model_lucia.h5')
+model.save('../../model_edges_jaffe.h5')
 
 #evaluate the model
 score = model.evaluate(x_test, y_test, verbose=0)

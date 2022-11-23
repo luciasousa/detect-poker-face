@@ -18,6 +18,7 @@ datapath = '../../fer'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
+read_images = []
 img_names = []
 
 #read all images into array
@@ -26,6 +27,7 @@ for label in labels:
     print ('Loaded the images of dataset-'+'{}\n'.format(label))
     for img in img_list:
         input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+        read_images.append(input_img)
         #convert to gray
         input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         input_img_resize=cv2.resize(input_img,(48,48))
@@ -69,8 +71,8 @@ def canny_edge(img):
 
 #all images to edges
 img_data_edges = []
-for i in range(len(img_data)):
-    img_data_edges.append(canny_edge(img_data[i]))
+for i in range(len(read_images)):
+    img_data_edges.append(canny_edge(read_images[i]))
 img_data_edges = np.array(img_data_edges)
 img_data_edges = img_data_edges.astype('float32')
 img_data_edges = img_data_edges/255
@@ -129,4 +131,12 @@ print("Train accuracy:", score[1])
 score = model.evaluate(x_val, y_val, verbose=0)
 print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
+
+
+#Test loss: 0.058893926441669464
+#Test accuracy: 0.9967494606971741
+#Train loss: 0.01616777293384075
+#Train accuracy: 0.9967614412307739
+#Validation loss: 0.07333572953939438
+#Validation accuracy: 0.9955145120620728
 

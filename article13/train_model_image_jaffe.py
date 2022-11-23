@@ -130,3 +130,10 @@ for i in range(1, columns*rows +1):
     #save the plot into a file
     plt.imshow(x_test[i].reshape(48,48),cmap='gray')
 plt.savefig('plot.png')
+
+#Test loss: 3.243600872337993e-073
+#Test accuracy: 1.0
+#Train loss: 4.04560381639385e-07
+#Train accuracy: 1.0
+#Validation loss: 3.714891647632612e-07
+#Validation accuracy: 1.0

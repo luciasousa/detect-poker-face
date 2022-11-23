@@ -19,7 +19,7 @@ data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
 img_names = []
-
+read_images = []
 
 
 #read all images into array
@@ -28,6 +28,7 @@ for label in labels:
     print ('Loaded the images of dataset-'+'{}\n'.format(label))
     for img in img_list:
         input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+        read_images.append(input_img)
         #convert to gray
         input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         input_img_resize=cv2.resize(input_img,(48,48))
@@ -64,16 +65,22 @@ print(img_data.shape)
 print(y.shape)
 
 #convert to canny edges
-edges = []
-for i in range(len(img_data)):
-    edges.append(cv2.Canny(img_data[i], 100, 200))
-edges = np.array(edges)
-edges = edges.astype('float32')
-edges = edges/255
-print(edges.shape)
+#convert input image to cannny edge
+def canny_edge(img):
+    img = cv2.GaussianBlur(img, (5, 5), 0)
+    img = cv2.Canny(img, 100, 200)
+    return img
+
+img_data_edges = []
+for i in range(len(read_images)):
+    img_data_edges.append(canny_edge(read_images[i]))
+img_data_edges = np.array(img_data_edges)
+img_data_edges = img_data_edges.astype('float32')
+img_data_edges = img_data_edges/255
+img_data_edges.shape
 
 #split the data into train and test and validation
-x_train, x_test, y_train, y_test = train_test_split(edges, y, test_size=0.2,shuffle=True, random_state=8)
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=8)
 x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.25, shuffle=True, random_state=8)
 
 
@@ -139,3 +146,10 @@ for i in range(1, columns*rows +1):
     #save the plot into a file
     plt.imshow(x_test[i].reshape(48,48),cmap='gray')
 plt.savefig('plot.png')
+
+#Test loss: 7.762464093730159e-08
+#Test accuracy: 1.0
+#Train loss: 1.0606807876456514e-07
+#Train accuracy: 1.0
+#Validation loss: 9.425848901400968e-08
+#Validation accuracy: 1.0

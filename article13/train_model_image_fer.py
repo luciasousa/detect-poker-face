@@ -115,3 +115,11 @@ score = model.evaluate(x_val, y_val, verbose=0)
 print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
 
+#Test loss: 0.021326152607798576
+#Test accuracy: 0.9967494606971741
+#Train loss: 0.02073064260184765
+#Train accuracy: 0.9967614412307739
+#Validation loss: 0.02954835072159767
+#Validation accuracy: 0.9955145120620728
+
+

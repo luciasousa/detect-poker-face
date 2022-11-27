@@ -27,19 +27,19 @@ resize_and_rescale = keras.Sequential([
   layers.Rescaling(1./255)
 ])
 
-train_dataset  = train_datagen.flow_from_directory(directory = '../../input/fer2013/train',
+train_dataset  = train_datagen.flow_from_directory(directory = '../../FER2013/train',
                                                    target_size = (96,96),
                                                    class_mode = 'categorical',
                                                    subset = 'training',
                                                    batch_size = 64)
                                     
-valid_dataset = valid_datagen.flow_from_directory(directory = '../../input/fer2013/train',
+valid_dataset = valid_datagen.flow_from_directory(directory = '../../FER2013/train',
                                                   target_size = (96,96),
                                                   class_mode = 'categorical',
                                                   subset = 'validation',
                                                   batch_size = 64)
                                     
-test_dataset = test_datagen.flow_from_directory(directory = '../../input/fer2013/test',
+test_dataset = test_datagen.flow_from_directory(directory = '../../FER2013/test',
                                                   target_size = (96,96),
                                                   class_mode = 'categorical',
                                                   batch_size = 64)                            

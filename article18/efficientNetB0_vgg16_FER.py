@@ -28,19 +28,19 @@ resize_and_rescale = keras.Sequential([
   layers.Rescaling(1./255)
 ])
 
-train_dataset  = train_datagen.flow_from_directory(directory = '../../input/fer2013/train',
+train_dataset  = train_datagen.flow_from_directory(directory = '../../FER2013/train',
                                                    target_size = (96,96),
                                                    class_mode = 'categorical',
                                                    subset = 'training',
                                                    batch_size = 64)
                                     
-valid_dataset = valid_datagen.flow_from_directory(directory = '../../input/fer2013/train',
+valid_dataset = valid_datagen.flow_from_directory(directory = '../../FER2013/train',
                                                   target_size = (96,96),
                                                   class_mode = 'categorical',
                                                   subset = 'validation',
                                                   batch_size = 64)
                                     
-test_dataset = test_datagen.flow_from_directory(directory = '../../input/fer2013/test',
+test_dataset = test_datagen.flow_from_directory(directory = '../../FER2013/test',
                                                   target_size = (96,96),
                                                   class_mode = 'categorical',
                                                   batch_size = 64)                            
@@ -68,7 +68,7 @@ history = ensemble_model.fit(train_dataset, epochs=50, validation_data=valid_dat
 ensemble_model.save('models/efficientNetB0_vgg16_FER.h5')
 
 #evaluate the model
-test_loss, test_acc = model.evaluate(test_dataset, verbose=2)
+test_loss, test_acc = ensemble_model.evaluate(test_dataset, verbose=2)
 #print test accuracy
 print('Test accuracy:', test_acc)
 print('Train accuracy: ', history.history['accuracy'][-1])

@@ -14,7 +14,7 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
 #define datapath
-datapath = '../../ck/CK+48'
+datapath = '../../CK'
 data_dir_list = os.listdir(datapath)
 neutral_instances = 0
 labels = sorted(data_dir_list)
@@ -47,13 +47,24 @@ def getLabel(id):
 
 # convert class labels to on-hot encoding
 labels_int = np.ones((num_of_samples,),dtype='int64')
-labels_int[0:134]=0 #135
-labels_int[135:188]=1 #54
-labels_int[189:365]=2 #177
-labels_int[366:440]=3 #75
-labels_int[441:647]=4 #207
-labels_int[648:731]=5 #84
-labels_int[732:]=6 #249
+
+for label in labels:
+    img_list=os.listdir(datapath+'/'+ label+'/')
+    for i in range(len(img_list)):
+        if label == 'anger':
+            labels_int[i] = 0
+        elif label == 'contempt':
+            labels_int[i] = 1
+        elif label == 'disgust':
+            labels_int[i] = 2
+        elif label == 'fear':
+            labels_int[i] = 3
+        elif label == 'happy':
+            labels_int[i] = 4
+        elif label == 'sadness':
+            labels_int[i] = 5
+        elif label == 'surprise':
+            labels_int[i] = 6
 
 y = keras.utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
@@ -88,7 +99,7 @@ model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accura
 history = model.fit(x_train, y_train, batch_size=4, epochs=50, verbose=1, validation_data=(x_test, y_test), shuffle=True)
 
 #save model
-model.save('model_trained.h5')
+model.save('../../model_daniel.h5')
 
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
@@ -97,3 +108,14 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.savefig('accuracy.png')
+
+#clear the plot
+plt.clf()
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('loss.png')

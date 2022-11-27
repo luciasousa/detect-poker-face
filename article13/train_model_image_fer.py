@@ -14,7 +14,7 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
 #define datapath
-datapath = '../../fer'
+datapath = '../../FER2013_7classes'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
@@ -37,7 +37,7 @@ img_data = img_data.astype('float32')
 img_data = img_data/255
 img_data.shape
 
-num_classes = 2
+num_classes = 7
 num_of_samples = img_data.shape[0]
 
 names = ['angry','disgust','fear','happy','sad','surprise','neutral']
@@ -52,10 +52,20 @@ labels_int = np.ones((num_of_samples,),dtype='int64')
 for label in labels:
     img_list=os.listdir(datapath+'/'+ label+'/')
     for i in range(len(img_list)):
-        if label == 'neutral':
+        if label == 'angry':
             labels_int[i] = 0
-        else:
+        elif label == 'disgust':
             labels_int[i] = 1
+        elif label == 'fear':
+            labels_int[i] = 2
+        elif label == 'happy':
+            labels_int[i] = 3
+        elif label == 'sad':
+            labels_int[i] = 4
+        elif label == 'surprise':
+            labels_int[i] = 5
+        elif label == 'neutral':
+            labels_int[i] = 6
     
 y = keras.utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
@@ -71,9 +81,11 @@ IMAGE_SIZE = [48,48]
 model = keras.Sequential(
     [
         keras.Input(shape=(48,48,1)),
-        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Flatten(),
         layers.Dropout(0.5),
@@ -86,16 +98,12 @@ for layer in model.layers:
 model.layers[2].trainable = False
 model.layers[4].trainable = False
 
-#plot the model
-plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
-Image(retina=True, filename='model_plot.png')
-
 #compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 model.summary()
 
 #train the model
-model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
+history = model.fit(x_train, y_train, batch_size=4, epochs=150, validation_split=0.1)
 
 #save the model
 model.save('../../model_image_fer.h5')
@@ -115,11 +123,32 @@ score = model.evaluate(x_val, y_val, verbose=0)
 print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
 
-#Test loss: 0.021326152607798576
-#Test accuracy: 0.9967494606971741
-#Train loss: 0.02073064260184765
-#Train accuracy: 0.9967614412307739
-#Validation loss: 0.02954835072159767
-#Validation accuracy: 0.9955145120620728
+#plot the accuracy and loss
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+#save the plot
+plt.savefig('accuracy_image_fer.png')
 
+#clear the plot
+plt.clf()
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+#save the plot
+plt.savefig('loss_image_fer.png')
+
+#Test loss: 0.786396861076355
+#Test accuracy: 0.754353404045105
+#Train loss: 0.7483428120613098
+#Train accuracy: 0.7535444498062134
+#Validation loss: 0.8054413795471191
+#Validation accuracy: 0.7493403553962708
 

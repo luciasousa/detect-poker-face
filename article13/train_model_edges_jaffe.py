@@ -40,7 +40,7 @@ img_data = img_data.astype('float32')
 img_data = img_data/255
 img_data.shape
 
-num_classes = 2
+num_classes = 7
 num_of_samples = img_data.shape[0]
 
 names = ['ANGRY','DISGUST','FEAR','HAPPY','SAD','SURPRISE','NEUTRAL']
@@ -89,9 +89,11 @@ IMAGE_SIZE = [48,48]
 model = keras.Sequential(
     [
         keras.Input(shape=(48,48,1)),
-        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        layers.Conv2D(16, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.Conv2D(16, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Flatten(),
         layers.Dropout(0.5),
@@ -106,16 +108,13 @@ for layer in model.layers:
 model.layers[2].trainable = False
 model.layers[4].trainable = False
 
-#plot the model
-plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
-Image(retina=True, filename='model_plot.png')
 
 #compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 model.summary()
 
 #train the model
-model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
+history = model.fit(x_train, y_train, batch_size=4, epochs=150, validation_split=0.1)
 
 #save the model
 model.save('../../model_edges_jaffe.h5')
@@ -135,21 +134,25 @@ score = model.evaluate(x_val, y_val, verbose=0)
 print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
 
-#plot the names of the images with the predicted label and the actual label
-#plot 10 images
-fig=plt.figure(figsize=(8, 8))
-columns = 5
-rows = 2
-for i in range(1, columns*rows +1):
-    fig.add_subplot(rows, columns, i)
-    plt.title('Predicted: '+getLabel(np.argmax(model.predict(x_test[i].reshape(1,48,48,1))))+' Actual: '+getLabel(np.argmax(y_test[i])))
-    #save the plot into a file
-    plt.imshow(x_test[i].reshape(48,48),cmap='gray')
-plt.savefig('plot.png')
 
-#Test loss: 7.762464093730159e-08
-#Test accuracy: 1.0
-#Train loss: 1.0606807876456514e-07
-#Train accuracy: 1.0
-#Validation loss: 9.425848901400968e-08
-#Validation accuracy: 1.0
+#plot the accuracy and loss
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+#save
+plt.savefig('accuracy_edges_jaffe.png')
+
+#clear plot
+plt.clf()
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+#save
+plt.savefig('loss_edges_jaffe.png')

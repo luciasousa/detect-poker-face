@@ -14,8 +14,8 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
 #define datapath
-datapath = '../../jaffedbase'
-#datapath = '../../fer_binary/fer'
+#datapath = '../../jaffedbase'
+datapath = '../../FER2013_binary'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
@@ -52,7 +52,7 @@ def getLabel(id):
 labels_int = np.ones((num_of_samples,),dtype='int64')
 
 #split the name of the image to get the label and check if equal to 'NE'
-
+'''
 for i in range(num_of_samples):
     name = img_names[i]
     label = name.split('.')[1]
@@ -61,18 +61,18 @@ for i in range(num_of_samples):
         labels_int[i] = 0
     else:
         labels_int[i] = 1
-
+'''
 
 #for images in folder 'emotion' label 1 and folder 'neutral' label 0
-'''
+
 for label in labels:
     img_list=os.listdir(datapath+'/'+ label+'/')
     for i in range(len(img_list)):
-        if label == 'NEUTRAL':
+        if label == 'neutral':
             labels_int[i] = 0
         else:
             labels_int[i] = 1
-'''
+
 y = keras.utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
 print(y.shape)
@@ -112,7 +112,7 @@ model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accur
 model.summary()
 
 #train the model
-model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
+history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
 
 #save the model
 model.save('../../model_lucia.h5')
@@ -133,16 +133,27 @@ print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
 
 
-#plot the names of the images with the predicted label and the actual label
-for i in range(len(x_test)):
-    img = x_test[i]
-    img = img.reshape(1,48,48,1)
-    prediction = model.predict(img)
-    prediction = prediction.argmax()
-    print('predicted: ', getLabel(prediction), 'actual: ', getLabel(y_test[i].argmax()))
-    #plot the image
-    plt.imshow(x_test[i].reshape(48,48), cmap='gray')
-    plt.show()
-    #wait for key press
-    cv2.waitKey(0)
+#plot the accuracy and loss
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+#save
+plt.savefig('accuracy.png')
+
+#clear plot
+plt.clf()
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+#save
+plt.savefig('loss.png')
+
+
 

@@ -14,14 +14,11 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
 #define datapath
-#datapath = '../../jaffedbase'
-datapath = '../../FER2013_binary'
+datapath = '../../jaffe_binary'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
 img_names = []
-
-
 
 #read all images into array
 for label in labels:
@@ -52,7 +49,8 @@ def getLabel(id):
 labels_int = np.ones((num_of_samples,),dtype='int64')
 
 #split the name of the image to get the label and check if equal to 'NE'
-'''
+#jaffe
+
 for i in range(num_of_samples):
     name = img_names[i]
     label = name.split('.')[1]
@@ -61,17 +59,6 @@ for i in range(num_of_samples):
         labels_int[i] = 0
     else:
         labels_int[i] = 1
-'''
-
-#for images in folder 'emotion' label 1 and folder 'neutral' label 0
-
-for label in labels:
-    img_list=os.listdir(datapath+'/'+ label+'/')
-    for i in range(len(img_list)):
-        if label == 'neutral':
-            labels_int[i] = 0
-        else:
-            labels_int[i] = 1
 
 y = keras.utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
@@ -87,9 +74,11 @@ IMAGE_SIZE = [48,48]
 model = keras.Sequential(
     [
         keras.Input(shape=(48,48,1)),
-        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Flatten(),
         layers.Dropout(0.5),
@@ -100,8 +89,9 @@ model = keras.Sequential(
 for layer in model.layers:
     layer.trainable = True
 
-model.layers[2].trainable = False
-model.layers[4].trainable = False
+#model.layers[2].trainable = False
+#model.layers[4].trainable = False
+#model.layers[6].trainable = False
 
 #plot the model
 plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
@@ -115,7 +105,7 @@ model.summary()
 history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
 
 #save the model
-model.save('../../model_lucia.h5')
+model.save('../../model_lucia_jaffe.h5')
 
 #evaluate the model
 score = model.evaluate(x_test, y_test, verbose=0)
@@ -141,7 +131,7 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
-plt.savefig('accuracy.png')
+plt.savefig('accuracy_jaffe.png')
 
 #clear plot
 plt.clf()
@@ -153,7 +143,14 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
-plt.savefig('loss.png')
+plt.savefig('loss_jaffe.png')
 
+#JAFFE_binary
+#Test loss: 0.3928951025009155
+#Test accuracy: 0.9534883499145508
+#Train loss: 0.0013001528568565845
+#Train accuracy: 1.0
+#Validation loss: 0.8042483925819397
+#Validation accuracy: 0.8529411554336548
 
 

@@ -14,13 +14,11 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
 #define datapath
-datapath = '../../jaffedbase'
+datapath = '../../jaffe_7classes'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
 img_names = []
-
-
 
 #read all images into array
 for label in labels:
@@ -91,6 +89,7 @@ for layer in model.layers:
 #set layers max pool to not trainable
 model.layers[2].trainable = False
 model.layers[4].trainable = False
+model.layers[6].trainable = False
 
 #compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
@@ -138,3 +137,12 @@ plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('loss_image_jaffe.png')
+
+#Test loss: 2.0792307964256906e-07
+#Test accuracy: 1.0
+#Train loss: 1.0700668440222216e-07
+#Train accuracy: 1.0
+#Validation loss: 1.2475386768073804e-07
+#Validation accuracy: 1.0
+
+

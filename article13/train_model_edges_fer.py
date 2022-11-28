@@ -114,6 +114,7 @@ for layer in model.layers:
 #set max pool layers to not trainable
 model.layers[2].trainable = False
 model.layers[4].trainable = False
+model.layers[6].trainable = False
 
 #compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
@@ -161,10 +162,9 @@ plt.legend(['train', 'validation'], loc='upper left')
 #save the plot
 plt.savefig('loss_edges_fer.png')
 
-#Test loss: 0.8194593191146851
-#Test accuracy: 0.7527281045913696
-#Train loss: 0.8027129173278809
-#Train accuracy: 0.7494422197341919
-#Validation loss: 0.8294631242752075
+#Test loss: 0.8218222856521606
+#Test accuracy: 0.7529603242874146
+#Train loss: 0.8005245923995972
+#Train accuracy: 0.749730110168457
+#Validation loss: 0.8341816067695618
 #Validation accuracy: 0.7464379668235779
-

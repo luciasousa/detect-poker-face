@@ -55,10 +55,20 @@ labels_int = np.ones((num_of_samples,),dtype='int64')
 for label in labels:
     img_list=os.listdir(datapath+'/'+ label+'/')
     for i in range(len(img_list)):
-        if label == 'NEUTRAL':
+        if label == 'ANGRY':
             labels_int[i] = 0
-        else:
+        elif label == 'DISGUST':
             labels_int[i] = 1
+        elif label == 'FEAR':
+            labels_int[i] = 2
+        elif label == 'HAPPY':
+            labels_int[i] = 3
+        elif label == 'SAD':
+            labels_int[i] = 4
+        elif label == 'SURPRISE':
+            labels_int[i] = 5
+        elif label == 'NEUTRAL':
+            labels_int[i] = 6
     
 y = keras.utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
@@ -69,6 +79,7 @@ print(y.shape)
 def canny_edge(img):
     img = cv2.GaussianBlur(img, (5, 5), 0)
     img = cv2.Canny(img, 100, 200)
+    img = cv2.resize(img, (48, 48))
     return img
 
 img_data_edges = []
@@ -79,16 +90,44 @@ img_data_edges = img_data_edges.astype('float32')
 img_data_edges = img_data_edges/255
 img_data_edges.shape
 
+
 #split the data into train and test and validation
-x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=8)
-x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.25, shuffle=True, random_state=8)
+x_edge_train, x_edge_test, y_edge_train, y_edge_test = train_test_split(img_data_edges, y, test_size=0.12,shuffle=True, random_state=8)
+x_edge_train, x_edge_val, y_edge_train, y_edge_val = train_test_split(x_edge_train, y_edge_train, test_size=0.12, shuffle=True, random_state=8)
+
+#split the data into train and test and validation
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.12,shuffle=True, random_state=8)
+x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.12, shuffle=True, random_state=8)
 
 
 IMAGE_SIZE = [48,48]
 
-model = keras.Sequential(
+# create model with z-score normalization
+model_image = keras.Sequential(
     [
         keras.Input(shape=(48,48,1)),
+        #z-score normalization
+        
+        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Flatten(),
+        layers.Dense(128, activation="relu"),
+        layers.Dense(7, activation="softmax"),
+    ]
+)
+
+model_image.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+
+
+model_edges = keras.Sequential(
+    [
+        keras.Input(shape=(48,48,1)),
+        #z-score normalization
+
         layers.Conv2D(16, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(16, kernel_size=(3, 3), activation="relu"),
@@ -101,39 +140,45 @@ model = keras.Sequential(
     ]
 )
 
-#set all layers to not trainable
+#compile the model
+model_edges.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+model_edges.summary()
+
+#connect the two models with a fully connected layer
+combinedInput = layers.concatenate([model_image.output, model_edges.output])
+x = layers.Dense(64, activation="relu")(combinedInput)
+x = layers.Dense(num_classes, activation="softmax")(x)
+model = keras.Model(inputs=[model_image.input, model_edges.input], outputs=x)
+
+#trainable true for all layers
 for layer in model.layers:
     layer.trainable = True
-#set layers max pool to not trainable
-model.layers[2].trainable = False
-model.layers[4].trainable = False
-model.layers[6].trainable = False
 
-
-#compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 model.summary()
 
+
 #train the model
-history = model.fit(x_train, y_train, batch_size=4, epochs=150, validation_split=0.1)
+history = model.fit([x_train,x_edge_train], y_train, batch_size=4, epochs=150, validation_data=([x_val,x_edge_val], y_val))
+
 
 #save the model
 model.save('../../model_edges_jaffe.h5')
 
 #evaluate the model
-score = model.evaluate(x_test, y_test, verbose=0)
-print("Test loss:", score[0])
-print("Test accuracy:", score[1])
+score = model.evaluate([x_test,x_edge_test], y_test, verbose=0)
+print('Test loss:', score[0])
+print('Test accuracy:', score[1])
 
 #print train accuracy
-score = model.evaluate(x_train, y_train, verbose=0)
-print("Train loss:", score[0])
-print("Train accuracy:", score[1])
+score = model.evaluate([x_train,x_edge_train], y_train, verbose=0)
+print('Train loss:', score[0])
+print('Train accuracy:', score[1])
 
 #print validation accuracy
-score = model.evaluate(x_val, y_val, verbose=0)
-print("Validation loss:", score[0])
-print("Validation accuracy:", score[1])
+score = model.evaluate([x_val,x_edge_val], y_val, verbose=0)
+print('Validation loss:', score[0])
+print('Validation accuracy:', score[1])
 
 
 #plot the accuracy and loss
@@ -158,10 +203,12 @@ plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('loss_edges_jaffe.png')
 
-#Test loss: 2.411907189525664e-07
-#Test accuracy: 1.0
-#Train loss: 1.5300076938729035e-07
-#Train accuracy: 1.0
-#Validation loss: 1.6356617038582044e-07
-#Validation accuracy: 1.0
+#Test loss: 0.829822301864624
+#Test accuracy: 0.8846153616905212
+#Train loss: 0.017270904034376144
+#Train accuracy: 0.9939024448394775
+#Validation loss: 0.28300970792770386
+#Validation accuracy: 0.95652174949646
+
+
 

@@ -58,7 +58,7 @@ for label in labels:
         else:
             labels_int[i] = 1
 
-y = keras.utils.to_categorical(labels_int, num_classes)
+y = keras.utils.to_categorical(labels_int, num_classes) 
 print(img_data.shape)
 print(y.shape)
 
@@ -69,9 +69,9 @@ x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.
 
 IMAGE_SIZE = [48,48]
 
-model = keras.Sequential(
+model = keras.Sequential(  
     [
-        keras.Input(shape=(48,48,1)),
+        keras.Input(shape=(48,48,1)),  
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),

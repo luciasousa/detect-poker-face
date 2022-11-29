@@ -95,9 +95,6 @@ model = keras.Sequential(
 for layer in model.layers:
     layer.trainable = True
 #set max pool layers to not trainable
-model.layers[2].trainable = False
-model.layers[4].trainable = False
-model.layers[6].trainable = False
 
 #compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])

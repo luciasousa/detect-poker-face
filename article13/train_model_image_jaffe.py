@@ -52,10 +52,20 @@ labels_int = np.ones((num_of_samples,),dtype='int64')
 for label in labels:
     img_list=os.listdir(datapath+'/'+ label+'/')
     for i in range(len(img_list)):
-        if label == 'NEUTRAL':
+        if label == 'ANGRY':
             labels_int[i] = 0
-        else:
+        elif label == 'DISGUST':
             labels_int[i] = 1
+        elif label == 'FEAR':
+            labels_int[i] = 2
+        elif label == 'HAPPY':
+            labels_int[i] = 3
+        elif label == 'SAD':
+            labels_int[i] = 4
+        elif label == 'SURPRISE':
+            labels_int[i] = 5
+        elif label == 'NEUTRAL':
+            labels_int[i] = 6
     
 y = keras.utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
@@ -86,10 +96,6 @@ model = keras.Sequential(
 #set all layers to not trainable
 for layer in model.layers:
     layer.trainable = True
-#set layers max pool to not trainable
-model.layers[2].trainable = False
-model.layers[4].trainable = False
-model.layers[6].trainable = False
 
 #compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
@@ -138,11 +144,12 @@ plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('loss_image_jaffe.png')
 
-#Test loss: 2.0792307964256906e-07
-#Test accuracy: 1.0
-#Train loss: 1.0700668440222216e-07
-#Train accuracy: 1.0
-#Validation loss: 1.2475386768073804e-07
-#Validation accuracy: 1.0
+#Test loss: 1.2013652324676514
+#Test accuracy: 0.930232584476471
+#Train loss: 0.07405254989862442
+#Train accuracy: 0.9921259880065918
+#Validation loss: 0.6574267745018005
+#Validation accuracy: 0.930232584476471
+
 
 

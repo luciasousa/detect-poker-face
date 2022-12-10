@@ -4,11 +4,11 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow import keras
-from keras import layers
+from keras import layers, utils, models
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16
-from keras.layers import Dense, Flatten
-from keras.models import Model
+from keras.layers import Dense, Flatten, Input
+from keras.models import Model, Sequential
 from keras.utils import plot_model
 from IPython.display import Image
 from sklearn.utils import shuffle
@@ -77,7 +77,7 @@ def getLabel(id):
 #     plt.show()
 
 # convert class labels to on-hot encoding
-y = keras.utils.to_categorical(labels, num_classes)
+y = utils.to_categorical(labels, num_classes)
 # shuffle the dataset
 x,y = shuffle(img_data,y, random_state=2)
 # split the dataset
@@ -92,18 +92,18 @@ x_valid, x_test, y_valid, y_test = train_test_split(x_rem,y_rem, test_size=0.5)
 
 IMAGE_SIZE = [96, 96]
 #load efficientNetB0_JAFFE.h5
-efficientNetB0_JAFFE = keras.models.load_model('./models/efficientNetB0_JAFFE.h5')
+efficientNetB0_JAFFE = models.load_model('./models/efficientNetB0_JAFFE.h5')
 efficientNetB0_JAFFE._name = 'model3'
 #load vgg16_JAFFE.h5
-vgg16_JAFFE = keras.models.load_model('./models/vgg16_JAFFE.h5')
+vgg16_JAFFE = models.load_model('./models/vgg16_JAFFE.h5')
 vgg16_JAFFE._name = 'model4'
 
 models = [efficientNetB0_JAFFE, vgg16_JAFFE]
 
-model_input = keras.Input(shape=(96, 96, 3))
+model_input = Input(shape=(96, 96, 3))
 model_outputs = [model(model_input) for model in models]
 ensemble_output = layers.Average()(model_outputs)
-out_model = keras.Model(inputs=model_input, outputs=ensemble_output)
+out_model = Model(inputs=model_input, outputs=ensemble_output)
 out_model._name = 'ensemble'
 
 #trainable = False
@@ -113,7 +113,7 @@ for model in models:
 #compile the model
 out_model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
 #history
-history = out_model.fit(x_train, y_train, batch_size=4, epochs=50, verbose=1, validation_data=(x_test, y_test), shuffle=True)
+history = out_model.fit(x_train, y_train, batch_size=4, epochs=50, validation_data=(x_test, y_test), shuffle=True)
 
 #save model
 out_model.save('models/efficientNetB0_vgg16_JAFFE.h5')

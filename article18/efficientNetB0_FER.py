@@ -5,7 +5,7 @@ from keras import layers
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications.efficientnet import EfficientNetB0
 from keras.layers import Dense, Flatten
-from keras.models import Model
+from keras.models import Model, Sequential
 from keras.utils import plot_model
 from IPython.display import Image
 
@@ -23,7 +23,7 @@ valid_datagen = ImageDataGenerator(rescale = 1./255,validation_split = 0.2)
 
 test_datagen  = ImageDataGenerator(rescale = 1./255)
 
-resize_and_rescale = keras.Sequential([
+resize_and_rescale = Sequential([
   layers.Resizing(96, 96),
   layers.Rescaling(1./255)
 ])
@@ -64,13 +64,13 @@ Image(filename='models/efficientNetB0_FER.png')
 
 model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
 
-history = model.fit(train_dataset,validation_data=valid_dataset,epochs=50,verbose=1, shuffle=True)
+history = model.fit(train_dataset,validation_data=valid_dataset,epochs=50, shuffle=True)
 
 #save model
 model.save('models/efficientNetB0_FER.h5')
 
 #evaluate the model
-test_loss, test_acc = model.evaluate(test_dataset, verbose=2)
+test_loss, test_acc = model.evaluate(test_dataset)
 #print test accuracy
 print('Test accuracy:', test_acc)
 print('Train accuracy: ', history.history['accuracy'][-1])

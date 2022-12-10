@@ -4,10 +4,10 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow import keras
-from keras import layers
+from keras import layers, utils
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Flatten
-from keras.models import Model
+from keras.layers import Dense, Flatten, Input
+from keras.models import Model, Sequential
 from keras.utils import plot_model
 from IPython.display import Image
 from sklearn.utils import shuffle
@@ -67,7 +67,7 @@ for label in labels:
         elif label == 'NEUTRAL':
             labels_int[i] = 6
     
-y = keras.utils.to_categorical(labels_int, num_classes)
+y = utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
 print(y.shape)
 
@@ -78,9 +78,9 @@ x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.
 
 IMAGE_SIZE = [48,48]
 
-model = keras.Sequential(
+model = Sequential(
     [
-        keras.Input(shape=(48,48,1)),
+        Input(shape=(48,48,1)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
@@ -108,17 +108,17 @@ history = model.fit(x_train, y_train, batch_size=4, epochs=150, validation_split
 model.save('../../model_image_jaffe.h5')
 
 #evaluate the model
-score = model.evaluate(x_test, y_test, verbose=0)
+score = model.evaluate(x_test, y_test)
 print("Test loss:", score[0])
 print("Test accuracy:", score[1])
 
 #print train accuracy
-score = model.evaluate(x_train, y_train, verbose=0)
+score = model.evaluate(x_train, y_train)
 print("Train loss:", score[0])
 print("Train accuracy:", score[1])
 
 #print validation accuracy
-score = model.evaluate(x_val, y_val, verbose=0)
+score = model.evaluate(x_val, y_val)
 print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
 

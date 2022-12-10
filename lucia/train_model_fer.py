@@ -3,8 +3,9 @@ from cv2 import resize
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix
 from tensorflow import keras
-from keras import layers
+from keras import layers, utils, Input, Sequential
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers import Dense, Flatten
 from keras.models import Model
@@ -30,7 +31,7 @@ for label in labels:
         input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         input_img_resize=cv2.resize(input_img,(48,48))
         img_data_list.append(input_img_resize)
-        img_names.append(img)
+        img_names.append(label+'_'+img)
 
 img_data = np.array(img_data_list)
 img_data = img_data.astype('float32')
@@ -50,46 +51,38 @@ labels_int = np.ones((num_of_samples,),dtype='int64')
 
 #for images in folder 'emotion' label 1 and folder 'neutral' label 0
 #fer2013
-for label in labels:
-    img_list=os.listdir(datapath+'/'+ label+'/')
-    for i in range(len(img_list)):
-        if label == 'neutral':
-            labels_int[i] = 0
-        else:
-            labels_int[i] = 1
+for i in range(num_of_samples):
+    name = img_names[i]
+    label = name.split('_')[0]
+    if label == 'neutral':
+        labels_int[i] = 0
+    else:
+        labels_int[i] = 1
+    
 
-y = keras.utils.to_categorical(labels_int, num_classes) 
+y = utils.to_categorical(labels_int, num_classes) 
 print(img_data.shape)
 print(y.shape)
 
 #split the data into train and test and validation
-x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=8)
-x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, shuffle=True, random_state=8)
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=2)
+x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.1, shuffle=True, random_state=2)
 
 
 IMAGE_SIZE = [48,48]
 
-model = keras.Sequential(  
+model = Sequential(  
     [
-        keras.Input(shape=(48,48,1)),  
-        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        Input(shape=(48,48,1)),
+        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Flatten(),
         layers.Dropout(0.5),
         layers.Dense(num_classes, activation="softmax"),
     ]
 )
-
-for layer in model.layers:
-    layer.trainable = True
-
-#model.layers[2].trainable = False
-#model.layers[4].trainable = False
-#model.layers[6].trainable = False
 
 #plot the model
 plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
@@ -100,23 +93,22 @@ model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accur
 model.summary()
 
 #train the model
-history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
-
+history = model.fit(x_train, y_train, batch_size=512, epochs=50, validation_data=(x_val, y_val))
 #save the model
 model.save('../../model_lucia_fer.h5')
 
 #evaluate the model
-score = model.evaluate(x_test, y_test, verbose=0)
+score = model.evaluate(x_test, y_test)
 print("Test loss:", score[0])
 print("Test accuracy:", score[1])
 
 #print train accuracy
-score = model.evaluate(x_train, y_train, verbose=0)
+score = model.evaluate(x_train, y_train)
 print("Train loss:", score[0])
 print("Train accuracy:", score[1])
 
 #print validation accuracy
-score = model.evaluate(x_val, y_val, verbose=0)
+score = model.evaluate(x_val, y_val)
 print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
 
@@ -143,10 +135,11 @@ plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('loss_fer.png')
 
-#FER2013_binary
-#Test loss: 0.0
-#Test accuracy: 1.0
-#Train loss: 0.0
-#Train accuracy: 1.0
-#Validation loss: 0.0
-#Validation accuracy: 1.0
+plt.clf()
+
+#predict the test set and print the classification report and confusion matrix with number of classes 2 (neutral and not neutral) and target names neutral and not neutral 
+y_pred = model.predict(x_test)
+y_pred = np.argmax(y_pred, axis=1)
+y_test = np.argmax(y_test, axis=1)
+print(classification_report(y_test, y_pred, target_names=names))
+print(confusion_matrix(y_test, y_pred))

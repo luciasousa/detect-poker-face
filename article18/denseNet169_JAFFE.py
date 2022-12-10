@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow import keras
-from keras import layers
+from keras import layers, utils
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import DenseNet169
 from keras.layers import Dense, Flatten
@@ -77,11 +77,9 @@ def getLabel(id):
 #     plt.show()
 
 # convert class labels to on-hot encoding
-y = keras.utils.to_categorical(labels, num_classes)
+y = utils.to_categorical(labels, num_classes)
 # shuffle the dataset
 x,y = shuffle(img_data,y, random_state=2)
-# split the dataset
-#x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=2)
 # In the first step we will split the data in training and remaining dataset
 x_train, x_rem, y_train, y_rem = train_test_split(x,y, train_size=0.8)
 
@@ -119,10 +117,10 @@ history = model.fit(x_train, y_train, epochs=50, batch_size=4, validation_data=(
 model.save('models/denseNet169_JAFFE.h5')
 
 #evaluate the model
-score = model.evaluate(x_test, y_test, verbose=0, batch_size=4)
+score = model.evaluate(x_test, y_test,batch_size=4)
 print('Test accuracy:', score[1])
-score = model.evaluate(x_train, y_train, verbose=0, batch_size=4)
+score = model.evaluate(x_train, y_train,batch_size=4)
 print('Train accuracy:', score[1])
-score = model.evaluate(x_valid, y_valid, verbose=0, batch_size=4)
+score = model.evaluate(x_valid, y_valid, batch_size=4)
 print('Validation accuracy:', score[1])
 

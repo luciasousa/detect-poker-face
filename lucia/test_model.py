@@ -133,12 +133,14 @@ video_capture.release()
 cv2.destroyAllWindows()
 
 '''
-model = load_model('../../model_lucia.h5')
+filtered_face = np.zeros((1, 48, 48, 1))
+model = load_model('../../model_lucia_jaffe.h5')
 images = []
 for filename in os.listdir('images'):
     images.append('images/'+filename)
         
 for img in images:
+    print(img)
     image = cv2.imread(img)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     shape = []
@@ -182,12 +184,13 @@ for img in images:
             face = face.astype('float32') / 255
             prediction = model.predict(face)
             emotion = get_emotion(np.argmax(prediction))
-            x = bb
+            x = bb[i][0]-10
             y = bb[i][1]+bb[i][2]+20
-            #cv2.putText(image, emotion, (x, y), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), thickness=1, lineType=2)
-            print(emotion)
-    cv2.imshow('image', image)
+            cv2.putText(image, emotion, (x, y), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), thickness=1, lineType=2)
+
+    cv2.imshow('Frame', image)
     cv2.imshow('filtered_face', filtered_face)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
+
+cv2.destroyAllWindows()
 

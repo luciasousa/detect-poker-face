@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow import keras
-from keras import layers
+from keras import layers, utils
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16
 from keras.layers import Dense, Flatten
@@ -77,7 +77,7 @@ def getLabel(id):
 #     plt.show()
 
 # convert class labels to on-hot encoding
-y = keras.utils.to_categorical(labels, num_classes)
+y = utils.to_categorical(labels, num_classes)
 # shuffle the dataset
 x,y = shuffle(img_data,y, random_state=2)
 # split the dataset
@@ -120,10 +120,10 @@ model.save('models/vgg16_JAFFE.h5')
 
 #print test, train and validation accuracy
 #evaluate the model
-score = model.evaluate(x_test, y_test, verbose=0, batch_size=4)
+score = model.evaluate(x_test, y_test,  batch_size=4)
 print('Test accuracy:', score[1])
-score = model.evaluate(x_train, y_train, verbose=0, batch_size=4)
+score = model.evaluate(x_train, y_train,batch_size=4)
 print('Train accuracy:', score[1])
-score = model.evaluate(x_valid, y_valid, verbose=0, batch_size=4)
+score = model.evaluate(x_valid, y_valid, batch_size=4)
 print('Validation accuracy:', score[1])
 

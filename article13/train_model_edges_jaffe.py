@@ -4,10 +4,10 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow import keras
-from keras import layers
+from keras import layers, utils
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Flatten
-from keras.models import Model
+from keras.layers import Dense, Flatten, Input
+from keras.models import Model, Sequential
 from keras.utils import plot_model
 from IPython.display import Image
 from sklearn.utils import shuffle
@@ -70,7 +70,7 @@ for label in labels:
         elif label == 'NEUTRAL':
             labels_int[i] = 6
     
-y = keras.utils.to_categorical(labels_int, num_classes)
+y = utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
 print(y.shape)
 
@@ -103,9 +103,9 @@ x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.
 IMAGE_SIZE = [48,48]
 
 # create model with z-score normalization
-model_image = keras.Sequential(
+model_image = Sequential(
     [
-        keras.Input(shape=(48,48,1)),
+        Input(shape=(48,48,1)),
         #z-score normalization
         
         layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
@@ -123,9 +123,9 @@ model_image = keras.Sequential(
 model_image.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 
 
-model_edges = keras.Sequential(
+model_edges = Sequential(
     [
-        keras.Input(shape=(48,48,1)),
+        Input(shape=(48,48,1)),
         #z-score normalization
 
         layers.Conv2D(16, kernel_size=(3, 3), activation="relu"),
@@ -148,7 +148,7 @@ model_edges.summary()
 combinedInput = layers.concatenate([model_image.output, model_edges.output])
 x = layers.Dense(64, activation="relu")(combinedInput)
 x = layers.Dense(num_classes, activation="softmax")(x)
-model = keras.Model(inputs=[model_image.input, model_edges.input], outputs=x)
+model = Model(inputs=[model_image.input, model_edges.input], outputs=x)
 
 #trainable true for all layers
 for layer in model.layers:
@@ -166,17 +166,17 @@ history = model.fit([x_train,x_edge_train], y_train, batch_size=4, epochs=150, v
 model.save('../../model_edges_jaffe.h5')
 
 #evaluate the model
-score = model.evaluate([x_test,x_edge_test], y_test, verbose=0)
+score = model.evaluate([x_test,x_edge_test], y_test)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
 
 #print train accuracy
-score = model.evaluate([x_train,x_edge_train], y_train, verbose=0)
+score = model.evaluate([x_train,x_edge_train], y_train)
 print('Train loss:', score[0])
 print('Train accuracy:', score[1])
 
 #print validation accuracy
-score = model.evaluate([x_val,x_edge_val], y_val, verbose=0)
+score = model.evaluate([x_val,x_edge_val], y_val)
 print('Validation loss:', score[0])
 print('Validation accuracy:', score[1])
 

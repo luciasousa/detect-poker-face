@@ -3,8 +3,9 @@ from cv2 import resize
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix
 from tensorflow import keras
-from keras import layers
+from keras import layers, utils, Sequential, Input
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers import Dense, Flatten
 from keras.models import Model
@@ -60,25 +61,24 @@ for i in range(num_of_samples):
     else:
         labels_int[i] = 1
 
-y = keras.utils.to_categorical(labels_int, num_classes)
+y = utils.to_categorical(labels_int, num_classes)
 print(img_data.shape)
 print(y.shape)
 
 #split the data into train and test and validation
-x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=8)
-x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, shuffle=True, random_state=8)
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=2)
+x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.1, shuffle=True, random_state=2)
 
 
 IMAGE_SIZE = [48,48]
 
-model = keras.Sequential(
+model = Sequential(
     [
-        keras.Input(shape=(48,48,1)),
-        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        #with 2 convolutional layers
+        Input(shape=(48,48,1)),
+        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Flatten(),
         layers.Dropout(0.5),
@@ -86,12 +86,6 @@ model = keras.Sequential(
     ]
 )
 
-for layer in model.layers:
-    layer.trainable = True
-
-#model.layers[2].trainable = False
-#model.layers[4].trainable = False
-#model.layers[6].trainable = False
 
 #plot the model
 plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
@@ -102,23 +96,23 @@ model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accur
 model.summary()
 
 #train the model
-history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_split=0.1)
+history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_data=(x_val, y_val))
 
 #save the model
 model.save('../../model_lucia_jaffe.h5')
 
 #evaluate the model
-score = model.evaluate(x_test, y_test, verbose=0)
+score = model.evaluate(x_test, y_test)
 print("Test loss:", score[0])
 print("Test accuracy:", score[1])
 
 #print train accuracy
-score = model.evaluate(x_train, y_train, verbose=0)
+score = model.evaluate(x_train, y_train)
 print("Train loss:", score[0])
 print("Train accuracy:", score[1])
 
 #print validation accuracy
-score = model.evaluate(x_val, y_val, verbose=0)
+score = model.evaluate(x_val, y_val)
 print("Validation loss:", score[0])
 print("Validation accuracy:", score[1])
 
@@ -144,6 +138,19 @@ plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('loss_jaffe.png')
+
+#clear plot
+plt.clf()
+
+#predict the test set
+y_pred = model.predict(x_test)
+y_pred = np.argmax(y_pred, axis=1)
+y_test = np.argmax(y_test, axis=1)
+
+#confusion matrix and classification report
+print(classification_report(y_test, y_pred, target_names=names))
+print(confusion_matrix(y_test, y_pred))
+
 
 #JAFFE_binary
 #Test loss: 0.3928951025009155

@@ -1,3 +1,4 @@
+#train model with CNN architecture
 import os
 from cv2 import resize
 import cv2
@@ -15,31 +16,61 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import dlib
 
-# Convert the facial landmarks dlib format to numpy
-def shape_to_np(shape):
-	# pre-trained facial landmark detector inside the dlib library is used to estimate the location of 68 (x, y)-coordinates
-	# that map to facial structures on the face
-	landmarks = np.zeros((68,2), dtype = int)
-	for i in range(0,68):
-		landmarks[i] = (shape.part(i).x, shape.part(i).y)
-	return landmarks
 
-# take the bounding box predicted by dlib library
-# and convert it into (x, y, w, h) where x, y are coordinates
-# and w, h are width and height
+clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
+
+# Preprocessing block
+def hist_eq(img):
+	#call the .apply method on the CLAHE object to apply histogram equalization
+    return clahe.apply(img)
+
+def smooth(img):
+	#Gaussian blurring is highly effective in removing Gaussian noise from an image.
+	return cv2.GaussianBlur(img,(3,3),0)
+
+def resize(img):
+	return cv2.resize(img, (32,32))
+
+def to_grayscale(image):
+	return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# 
 def rect_to_bb(rect):
 	x = rect.left()
 	y = rect.top()
 	w = rect.right() - x
 	h = rect.bottom() - y
+	
 	return (x, y, w, h)
 
-#Draw the contours
-def draw_contour(shape):
-	convexHull = cv2.convexHull(shape)
-	cont = cv2.drawContours(image, [convexHull], -1, (255, 0, 0), 2)
-	
-	return cont
+# Convert the facial landmarks dlib format to numpy
+def shape_to_np(shape):
+	# pre-trained facial landmark detector inside the dlib library is used to estimate the location of 68 (x, y)-coordinates
+	# that map to facial structures on the face
+	landmarks = np.zeros((68,2), dtype = int)
+
+	for i in range(0,68):
+		landmarks[i] = (shape.part(i).x, shape.part(i).y)
+
+	return landmarks
+
+
+# Face detection
+def detect_face(image, gray_image):
+	rects = detector(gray_image, 1)
+	shape = []
+	bb = []
+
+	for (z, rect) in enumerate(rects):
+		if rect is not None and rect.top() >= 0 and rect.right() <= gray_image.shape[1] and rect.bottom() <= gray_image.shape[0] and rect.left() >= 0:
+			predicted = predictor(gray_image, rect)
+			shape.append(shape_to_np(predicted))
+			(x, y, w, h) = rect_to_bb(rect)
+			bb.append((x, y, w, h))
+			cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+		#for (x, y) in shape:
+		#	cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
+
+	return shape, bb
 
 # Rotation correction
 def rotate(gray_image, shape):
@@ -59,19 +90,19 @@ def rotate(gray_image, shape):
 
 	return dst, new_shape
 
-# Crop the face
-def crop_face(gray_image, shape):
-    aux = shape[4] - shape[12]
-    distance = np.linalg.norm(aux)
-    h = int(distance * 0.1)
-    tl = (int((shape[36][0]+shape[18][0])/2), shape[18][1]-h)
-    br = (int((shape[45][0]+shape[25][0])/2), int((shape[57][1]+(shape[10][1]+shape[11][1])/2)/2))
-    roi = gray_image[tl[1]:br[1],tl[0]:br[0]]
-    return roi
+# Crop the face by using the facial landmarks of dlib
+def cropping(rotated_img, shape):
+	aux = shape[4] - shape[12]
+	distance = np.linalg.norm(aux)
+	h = int(distance * 0.1)
+	tl = (int((shape[36][0]+shape[18][0])/2), shape[18][1]-h)
+	br = (int((shape[45][0]+shape[25][0])/2), int((shape[57][1]+(shape[10][1]+shape[11][1])/2)/2))
+	roi = rotated_img[tl[1]:br[1],tl[0]:br[0]]
+	return roi
 
 
 #define datapath
-datapath = '../../FER2013_binary'
+datapath = '../../CK_binary'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
@@ -81,24 +112,27 @@ predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
 #read all images into array
 for label in labels:
+    print(label)
     img_list=os.listdir(datapath+'/'+ label+'/')
     print ('Loaded the images of dataset-'+'{}\n'.format(label))
     for img in img_list:
         input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+        input_img = cv2.resize(input_img, (96, 96))
         gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         shape = []
         bb = []
         dets = detector(input_img, 1)
         _, scores, idx = detector.run(input_img, 1, -1)
         for i, d in enumerate(dets):
-            if d is not None and d.top() >= 0 and d.right() <= gray_image.shape[1] and d.bottom() <= gray_image.shape[0] and d.left() >= 0:
-                predicted = predictor(gray_image, d)
+            #print("Detection {}: Left: {} Top: {} Right: {} Bottom: {} Confidence: {}".format(i, d.left(), d.top(), d.right(), d.bottom(), scores[i]))
+            if d is not None and d.top() >= 0 and d.right() <= input_img.shape[1] and d.bottom() <= input_img.shape[0] and d.left() >= 0:
+                predicted = predictor(input_img, d)
                 shape.append(shape_to_np(predicted))
                 (x, y, w, h) = rect_to_bb(d)
                 bb.append((x, y, w, h))
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             #SECOND - process the image, rotate, crop, increase contrast, remove noise
-            for i in range(0,len(shape)):
+            for j in range(0,len(shape)):
                 #Stage 0: Raw Set
                 #img_data_list.append(gray_image)
 
@@ -107,19 +141,20 @@ for label in labels:
                 #img_data_list.append(rotated_img)
 
                 #Stage 2: Cropped Set
-                #cropped_face = crop_face(rotated_img, landmarks)
+                #cropped_face = cropping(rotated_img, landmarks)
                 #img_data_list.append(cropped_face)
 
                 #Stage 3: Intensity Normalization Set
-                image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #daniel não tem isto
+                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
                 #img_data_list.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
-                eq_face = cv2.equalizeHist(image_norm)
+                eq_face = hist_eq(rotated_img)
                 #img_data_list.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = cv2.GaussianBlur(eq_face, (5, 5), 0)
+                filtered_face = smooth(eq_face)
                 img_data_list.append(filtered_face)
 
                 img_names.append(label+'_'+img)
@@ -131,6 +166,8 @@ img_data.shape
 
 num_classes = 2
 num_of_samples = img_data.shape[0]
+
+print("number of samples: ",num_of_samples)
 
 names = ['neutral','not neutral']
 
@@ -159,12 +196,11 @@ print(y.shape)
 x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=2)
 x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.1, shuffle=True, random_state=2)
 
-
-IMAGE_SIZE = [48,48]
+IMAGE_SIZE = [96,96]
 
 model = Sequential(  
     [
-        Input(shape=(48,48,1)),
+        Input(shape=(96,96,1)),
         layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
@@ -184,9 +220,9 @@ model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accur
 model.summary()
 
 #train the model 
-history = model.fit(x_train, y_train, batch_size=512, epochs=50, validation_data=(x_val, y_val))
+history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_data=(x_val, y_val))
 #save the model
-model.save('../../model_lucia_fer.h5')
+model.save('../../model_lucia_ck.h5')
 
 #evaluate the model
 score = model.evaluate(x_test, y_test)
@@ -212,7 +248,7 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
-plt.savefig('accuracy_fer.png')
+plt.savefig('accuracy_ck.png')
 
 #clear plot
 plt.clf()
@@ -224,7 +260,7 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
-plt.savefig('loss_fer.png')
+plt.savefig('loss_ck.png')
 
 plt.clf()
 

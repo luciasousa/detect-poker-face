@@ -14,6 +14,65 @@ from keras.utils import plot_model
 from IPython.display import Image
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
+import dlib
+
+# Convert the facial landmarks dlib format to numpy
+def shape_to_np(shape):
+	# pre-trained facial landmark detector inside the dlib library is used to estimate the location of 68 (x, y)-coordinates
+	# that map to facial structures on the face
+	landmarks = np.zeros((68,2), dtype = int)
+	for i in range(0,68):
+		landmarks[i] = (shape.part(i).x, shape.part(i).y)
+	return landmarks
+
+# take the bounding box predicted by dlib library
+# and convert it into (x, y, w, h) where x, y are coordinates
+# and w, h are width and height
+def rect_to_bb(rect):
+	x = rect.left()
+	y = rect.top()
+	w = rect.right() - x
+	h = rect.bottom() - y
+	return (x, y, w, h)
+
+#Draw the contours
+def draw_contour(shape):
+	convexHull = cv2.convexHull(shape)
+	cont = cv2.drawContours(image, [convexHull], -1, (255, 0, 0), 2)
+	
+	return cont
+
+# Rotation correction
+def rotate(gray_image, shape):
+	dY = shape[36][1] - shape[45][1]
+	dX = shape[36][0] - shape[45][0]
+	angle = np.degrees(np.arctan2(dY, dX)) - 180
+
+	rows,cols = gray_image.shape
+	M = cv2.getRotationMatrix2D((cols/2,rows/2),angle,1)
+	dst = cv2.warpAffine(gray_image,M,(cols,rows))
+
+	#transform points
+	ones = np.ones(shape=(len(shape), 1))
+	points_ones = np.hstack([shape, ones])
+	new_shape  = M.dot(points_ones.T).T
+	new_shape = new_shape.astype(int)
+
+	return dst, new_shape
+
+# Crop the face
+def crop_face(gray_image, shape):
+    aux = shape[4] - shape[12]
+    distance = np.linalg.norm(aux)
+    h = int(distance * 0.1)
+    tl = (int((shape[36][0]+shape[18][0])/2), shape[18][1]-h)
+    br = (int((shape[45][0]+shape[25][0])/2), int((shape[57][1]+(shape[10][1]+shape[11][1])/2)/2))
+    roi = gray_image[tl[1]:br[1],tl[0]:br[0]]
+    return roi
+
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+
 
 #define datapath
 datapath = '../../fer_balanced'
@@ -30,11 +89,44 @@ for label in labels:
     print ('Loaded the images of dataset-'+'{}\n'.format(label))
     for img in img_list:
         input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
-        #convert to gray
-        input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-        input_img_resize=cv2.resize(input_img,(48,48))
-        img_data_list.append(input_img_resize)
-        img_names.append(label+'_'+img)
+        gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+        shape = []
+        bb = []
+        dets = detector(input_img, 1)
+        _, scores, idx = detector.run(input_img, 1, -1)
+        for i, d in enumerate(dets):
+            if d is not None and d.top() >= 0 and d.right() <= gray_image.shape[1] and d.bottom() <= gray_image.shape[0] and d.left() >= 0:
+                predicted = predictor(gray_image, d)
+                shape.append(shape_to_np(predicted))
+                (x, y, w, h) = rect_to_bb(d)
+                bb.append((x, y, w, h))
+                cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            #SECOND - process the image, rotate, crop, increase contrast, remove noise
+            for i in range(0,len(shape)):
+                #Stage 0: Raw Set
+                #img_data_list.append(gray_image)
+
+                #Stage 1: Rotation Correction Set
+                rotated_img, landmarks = rotate(gray_image, shape[i])
+                #img_data_list.append(rotated_img)
+
+                #Stage 2: Cropped Set
+                #cropped_face = crop_face(rotated_img, landmarks)
+                #img_data_list.append(cropped_face)
+
+                #Stage 3: Intensity Normalization Set
+                image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #img_data_list.append(image_norm)
+
+                #Stage 4: Histogram Equalization Set
+                eq_face = cv2.equalizeHist(image_norm)
+                #img_data_list.append(eq_face)
+
+                #Stage 5: Smoothed Set
+                filtered_face = cv2.GaussianBlur(eq_face, (5, 5), 0)
+                img_data_list.append(filtered_face)
+
+                img_names.append(label+'_'+img)
         if label == 'neutral':
             count_neutral += 1
         else:
@@ -46,15 +138,16 @@ print('count_emotion: ', count_emotion)
 #remove images from emotion folder to balance the dataset to 50/50 
 remove = count_emotion - count_neutral
 print('remove: ', remove)
-#randomly remove images from emotion folder
-for i in range(remove):
-    #randomly select an image from emotion folder
-    img_list=os.listdir(datapath+'/notneutral/')
-    img = random.choice(img_list)
-    #remove image from emotion folder
-    os.remove(datapath+'/notneutral/'+img)
-    img_data_list.remove(img)
-    img_names.remove('notneutral_'+img)
+if remove != 0:
+    #randomly remove images from emotion folder
+    for i in range(remove):
+        #randomly select an image from emotion folder
+        img_list=os.listdir(datapath+'/notneutral/')
+        img = random.choice(img_list)
+        #remove image from emotion folder
+        os.remove(datapath+'/notneutral/'+img)
+        img_data_list.remove(img)
+        img_names.remove('notneutral_'+img)
     
 img_data = np.array(img_data_list)
 img_data = img_data.astype('float32')

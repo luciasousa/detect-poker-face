@@ -34,13 +34,6 @@ def rect_to_bb(rect):
 	h = rect.bottom() - y
 	return (x, y, w, h)
 
-#Draw the contours
-def draw_contour(shape):
-	convexHull = cv2.convexHull(shape)
-	cont = cv2.drawContours(image, [convexHull], -1, (255, 0, 0), 2)
-	
-	return cont
-
 # Rotation correction
 def rotate(gray_image, shape):
 	dY = shape[36][1] - shape[45][1]
@@ -69,15 +62,17 @@ def crop_face(gray_image, shape):
     roi = gray_image[tl[1]:br[1],tl[0]:br[0]]
     return roi
 
-
-#define datapath
-datapath = '../../FER2013_binary'
-data_dir_list = os.listdir(datapath)
-labels = sorted(data_dir_list)
-img_data_list = []
-img_names = []
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+
+#define datapath
+datapath = '../../FER2013_augmentation'
+data_dir_list = os.listdir(datapath)
+labels = sorted(data_dir_list)
+img_data_list_tmp = []
+img_names_tmp = []
+img_data_list = []
+img_names = []
 
 #read all images into array
 for label in labels:
@@ -85,11 +80,82 @@ for label in labels:
     print ('Loaded the images of dataset-'+'{}\n'.format(label))
     for img in img_list:
         input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+        #convert to gray
+        input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+        input_img_resize=cv2.resize(input_img,(48,48))
+        img_data_list_tmp.append(input_img_resize)
+        img_names_tmp.append(label+'_'+img)
+
+alpha = 1.5 # Contrast control
+beta = 10 # Brightness control
+
+for label in labels:
+    if label == 'neutral':
+        img_list=os.listdir(datapath+'/'+ label+'/')
+        for img in img_list:
+            input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+            #convert to gray
+            input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+            #change intensity of image
+            input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
+            input_img_resize=cv2.resize(input_img,(48,48))
+            img_data_list_tmp.append(input_img_resize)
+            img_names_tmp.append(label+'_'+img+'_alpha_15_beta_10')
+
+            #save image to folder
+            cv2.imwrite(datapath + '/'+ label + '/'+ img+'_alpha_15_beta_10', input_img_resize)
+
+alpha = 0.5 # Contrast control
+beta = 10 # Brightness control
+
+for label in labels:
+    if label == 'neutral':
+        img_list=os.listdir(datapath+'/'+ label+'/')
+        for img in img_list:
+            input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+            #convert to gray
+            input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+            #change intensity of image
+            input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
+            input_img_resize=cv2.resize(input_img,(48,48))
+            img_data_list_tmp.append(input_img_resize)
+            img_names_tmp.append(label+'_'+img+'_alpha_05_beta_10')
+
+            #save image to folder
+            cv2.imwrite(datapath + '/'+ label + '/'+ img +'_alpha_05_beta_10', input_img_resize)
+
+''''
+alpha = 2.0 # Contrast control
+beta = 10 # Brightness control
+
+for label in labels:
+    if label == 'neutral':
+        img_list=os.listdir(datapath+'/'+ label+'/')
+        for img in img_list:
+            input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
+            #convert to gray
+            input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+            #change intensity of image
+            input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
+            input_img_resize=cv2.resize(input_img,(48,48))
+            img_data_list.append(input_img_resize)
+            img_names.append(label+'_'+img+'_alpha_20_beta_10')
+
+            #save image to folder
+            cv2.imwrite(datapath + '/'+ label + '/'+ img+ '_alpha_20_beta_10', input_img_resize)
+'''
+
+#read all images into array
+for label in labels:
+    img_list=os.listdir(datapath+'/'+ label+'/')
+    print ('Loaded the images of dataset-'+'{}\n'.format(label))
+    for img in img_data_list_tmp:
+        input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
         gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         shape = []
         bb = []
-        dets = detector(input_img, 1)
-        _, scores, idx = detector.run(input_img, 1, -1)
+        dets = detector(img, 1)
+        _, scores, idx = detector.run(img, 1, -1)
         for i, d in enumerate(dets):
             if d is not None and d.top() >= 0 and d.right() <= gray_image.shape[1] and d.bottom() <= gray_image.shape[0] and d.left() >= 0:
                 predicted = predictor(gray_image, d)
@@ -104,23 +170,23 @@ for label in labels:
 
                 #Stage 1: Rotation Correction Set
                 rotated_img, landmarks = rotate(gray_image, shape[i])
-                #img_data_list.append(rotated_img)
+                img_data_list.append(rotated_img)
 
                 #Stage 2: Cropped Set
                 #cropped_face = crop_face(rotated_img, landmarks)
                 #img_data_list.append(cropped_face)
 
                 #Stage 3: Intensity Normalization Set
-                image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
                 #img_data_list.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
-                eq_face = cv2.equalizeHist(image_norm)
+                #eq_face = cv2.equalizeHist(image_norm)
                 #img_data_list.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = cv2.GaussianBlur(eq_face, (5, 5), 0)
-                img_data_list.append(filtered_face)
+                #filtered_face = cv2.GaussianBlur(eq_face, (5, 5), 0)
+                #img_data_list.append(filtered_face)
 
                 img_names.append(label+'_'+img)
 
@@ -150,6 +216,10 @@ for i in range(num_of_samples):
     else:
         labels_int[i] = 1
     
+#print number of samples in each class
+print('Total number of samples:',num_of_samples)
+print('Number of neutral samples:',np.sum(labels_int==0))
+print('Number of not neutral samples:',np.sum(labels_int==1))
 
 y = utils.to_categorical(labels_int, num_classes) 
 print(img_data.shape)
@@ -183,10 +253,10 @@ Image(retina=True, filename='model_plot.png')
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 model.summary()
 
-#train the model 
+#train the model
 history = model.fit(x_train, y_train, batch_size=512, epochs=50, validation_data=(x_val, y_val))
 #save the model
-model.save('../../model_lucia_fer.h5')
+model.save('../../model_lucia_fer_data_augmentation.h5')
 
 #evaluate the model
 score = model.evaluate(x_test, y_test)

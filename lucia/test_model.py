@@ -134,7 +134,9 @@ cv2.destroyAllWindows()
 
 '''
 filtered_face = np.zeros((1, 48, 48, 1))
-model = load_model('../../model_lucia_jaffe.h5')
+model = load_model('../../model_lucia_fer.h5')
+#model = load_model('../../model_lucia_fer_balanced.h5')
+#model = load_model('../../model_lucia_fer_augmentation.h5')
 images = []
 for filename in os.listdir('images'):
     images.append('images/'+filename)
@@ -173,9 +175,16 @@ for img in images:
         #SECOND - process the image, rotate, crop, increase contrast, remove noise
         for i in range(0,len(shape)):
             face = []
+            #Stage 0: Raw Set
+            #Stage 1: Rotation Correction Set
             rotated_img, landmarks = rotate(gray_image, shape[i])
+            #Stage 2: Cropped Set
             cropped_face = crop_face(rotated_img, landmarks)
-            eq_face = cv2.equalizeHist(cropped_face)
+            #Stage 3: Intensity Normalization Set
+            image_norm = cv2.normalize(cropped_face, None, 0, 255, cv2.NORM_MINMAX)
+            #Stage 4: Histogram Equalization Set
+            eq_face = cv2.equalizeHist(image_norm)
+            #Stage 5: Smoothed Set
             filtered_face = cv2.GaussianBlur(eq_face, (5, 5), 0)
             resized_face = cv2.resize(filtered_face, (48, 48), interpolation = cv2.INTER_AREA)
             face.append(resized_face)
@@ -191,6 +200,8 @@ for img in images:
     cv2.imshow('Frame', image)
     cv2.imshow('filtered_face', filtered_face)
     cv2.waitKey(0)
+
+    
 
 cv2.destroyAllWindows()
 

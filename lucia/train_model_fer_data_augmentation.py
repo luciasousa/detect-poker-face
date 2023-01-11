@@ -62,8 +62,8 @@ def crop_face(gray_image, shape):
     roi = gray_image[tl[1]:br[1],tl[0]:br[0]]
     return roi
 
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+detector = dlib.get_frontal_face_detector() #type: ignore
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat') #type: ignore
 
 #define datapath
 datapath = '../../FER2013_augmentation'

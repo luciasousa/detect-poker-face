@@ -16,6 +16,13 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import dlib
 
+clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
+
+# Preprocessing block
+def hist_eq(img):
+	#call the .apply method on the CLAHE object to apply histogram equalization
+    return clahe.apply(img)
+
 # Convert the facial landmarks dlib format to numpy
 def shape_to_np(shape):
 	# pre-trained facial landmark detector inside the dlib library is used to estimate the location of 68 (x, y)-coordinates
@@ -34,13 +41,6 @@ def rect_to_bb(rect):
 	w = rect.right() - x
 	h = rect.bottom() - y
 	return (x, y, w, h)
-
-#Draw the contours
-def draw_contour(shape):
-	convexHull = cv2.convexHull(shape)
-	cont = cv2.drawContours(image, [convexHull], -1, (255, 0, 0), 2)
-	
-	return cont
 
 # Rotation correction
 def rotate(gray_image, shape):
@@ -70,8 +70,8 @@ def crop_face(gray_image, shape):
     roi = gray_image[tl[1]:br[1],tl[0]:br[0]]
     return roi
 
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+detector = dlib.get_frontal_face_detector() #type: ignore
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat') #type: ignore
 
 
 #define datapath
@@ -115,15 +115,15 @@ for label in labels:
                 #img_data_list.append(cropped_face)
 
                 #Stage 3: Intensity Normalization Set
-                image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
                 #img_data_list.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
-                eq_face = cv2.equalizeHist(image_norm)
+                eq_face = hist_eq(rotated_img)
                 #img_data_list.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = cv2.GaussianBlur(eq_face, (5, 5), 0)
+                filtered_face = cv2.GaussianBlur(eq_face, (3, 3), 0)
                 img_data_list.append(filtered_face)
 
                 img_names.append(label+'_'+img)

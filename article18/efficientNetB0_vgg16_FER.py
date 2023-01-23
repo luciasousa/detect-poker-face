@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 from tensorflow import keras
-from keras import layers
+from keras import layers, models
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16, EfficientNetB0
 from keras.layers import Dense, Flatten, Input
 from keras.models import Model, Sequential
 from keras.utils import plot_model
 from IPython.display import Image
+
 import numpy as np
 
 train_datagen = ImageDataGenerator( rescale = 1./255,

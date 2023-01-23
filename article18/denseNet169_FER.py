@@ -56,15 +56,14 @@ model = Model(inputs=base_model.input, outputs=prediction)
 
 model.summary()
 
-plot_model(model, to_file='models/denseNet169_FER.png', show_shapes=True,show_layer_names=True)
-Image(filename='models/denseNet169_FER.png') 
+plot_model(model, to_file='../../denseNet169_FER.png', show_shapes=True,show_layer_names=True)
 
 model.compile(optimizer='Adam', loss='categorical_crossentropy',metrics=['accuracy'])
 
 history=model.fit(train_dataset,validation_data=valid_dataset,epochs = 50, shuffle=True)
 
 #save model
-model.save('models/denseNet169_FER.h5')
+model.save('../../denseNet169_FER.h5')
 
 #evaluate the model
 test_loss, test_acc = model.evaluate(test_dataset)

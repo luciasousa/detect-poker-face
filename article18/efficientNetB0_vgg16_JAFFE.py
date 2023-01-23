@@ -101,7 +101,7 @@ vgg16_JAFFE._name = 'model4'
 models = [efficientNetB0_JAFFE, vgg16_JAFFE]
 
 model_input = Input(shape=(96, 96, 3))
-model_outputs = [model(model_input) for model in models]
+model_outputs = [Model(model_input) for model in models]
 ensemble_output = layers.Average()(model_outputs)
 out_model = Model(inputs=model_input, outputs=ensemble_output)
 out_model._name = 'ensemble'
@@ -121,11 +121,11 @@ out_model.save('models/efficientNetB0_vgg16_JAFFE.h5')
 
 #print test, train and validation accuracy
 #evaluate the model
-score = model.evaluate(x_test, y_test, verbose=0, batch_size=4)
+score = models.evaluate(x_test, y_test, verbose=0, batch_size=4)
 print('Test accuracy:', score[1])
-score = model.evaluate(x_train, y_train, verbose=0, batch_size=4)
+score = models.evaluate(x_train, y_train, verbose=0, batch_size=4)
 print('Train accuracy:', score[1])
-score = model.evaluate(x_valid, y_valid, verbose=0, batch_size=4)
+score = models.evaluate(x_valid, y_valid, verbose=0, batch_size=4)
 print('Validation accuracy:', score[1])
 
 

@@ -75,7 +75,7 @@ predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat') #type:
 
 
 #define datapath
-datapath = '../../CK_binary'
+datapath = '../../CK_data_augmentation'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
@@ -222,9 +222,9 @@ model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accur
 model.summary()
 
 #train the model
-history = model.fit(x_train, y_train, batch_size=512, epochs=50, validation_data=(x_val, y_val))
+history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_data=(x_val, y_val))
 #save the model
-model.save('../../model_lucia_fer.h5')
+model.save('../../model_lucia_ck.h5')
 
 #evaluate the model
 score = model.evaluate(x_test, y_test)

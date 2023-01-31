@@ -101,7 +101,7 @@ def cropping(rotated_img, shape):
 
 
 #define datapath
-datapath = '../../CK_binary'
+datapath = '../../dataset_ferck'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
@@ -118,22 +118,24 @@ for label in labels:
         input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
         input_img = cv2.resize(input_img, (96, 96))
         gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+        img_data_list.append(gray_image)
+        img_names.append(label+'_'+img)
         shape = []
         bb = []
-        dets = detector(input_img, 1)
-        _, scores, idx = detector.run(input_img, 1, -1)
-        for i, d in enumerate(dets):
+        #dets = detector(input_img, 1)
+        #_, scores, idx = detector.run(input_img, 1, -1)
+        #for i, d in enumerate(dets):
             #print("Detection {}: Left: {} Top: {} Right: {} Bottom: {} Confidence: {}".format(i, d.left(), d.top(), d.right(), d.bottom(), scores[i]))
-            if d is not None and d.top() >= 0 and d.right() <= input_img.shape[1] and d.bottom() <= input_img.shape[0] and d.left() >= 0:
-                predicted = predictor(input_img, d)
-                shape.append(shape_to_np(predicted))
-                (x, y, w, h) = rect_to_bb(d)
-                bb.append((x, y, w, h))
-                cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            #if d is not None and d.top() >= 0 and d.right() <= input_img.shape[1] and d.bottom() <= input_img.shape[0] and d.left() >= 0:
+                #predicted = predictor(input_img, d)
+                #shape.append(shape_to_np(predicted))
+                #(x, y, w, h) = rect_to_bb(d)
+                #bb.append((x, y, w, h))
+                #cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             #SECOND - process the image, rotate, crop, increase contrast, remove noise
-            for j in range(0,len(shape)):
+            #for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                img_data_list.append(gray_image)
+                #img_data_list.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
@@ -160,7 +162,7 @@ for label in labels:
                 #filtered_face = smooth(eq_face)
                 #img_data_list.append(filtered_face)
 
-                img_names.append(label+'_'+img)
+                #img_names.append(label+'_'+img)
 
 img_data = np.array(img_data_list)
 img_data = img_data.astype('float32')
@@ -196,7 +198,7 @@ print(img_data.shape)
 print(y.shape)
 
 #split the data into train and test and validation
-x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.1,shuffle=True, random_state=2)
+x_train, x_test, y_train, y_test = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=2)
 x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.1, shuffle=True, random_state=2)
 
 IMAGE_SIZE = [96,96]
@@ -214,10 +216,6 @@ model = Sequential(
     ]
 )
 
-import visualkeras
-from PIL import ImageFont
-visualkeras.layered_view(model, legend=True)
-
 #plot the model
 plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 Image(retina=True, filename='model_plot.png')
@@ -229,7 +227,7 @@ model.summary()
 #train the model 
 history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_data=(x_val, y_val))
 #save the model
-model.save('../../model_lucia_ck.h5')
+model.save('../../model_lucia_ckfer.h5')
 
 #evaluate the model
 score = model.evaluate(x_test, y_test)
@@ -255,7 +253,7 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
-plt.savefig('accuracy_ck.png')
+plt.savefig('accuracy_ckfer.png')
 
 #clear plot
 plt.clf()
@@ -267,7 +265,7 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
-plt.savefig('loss_ck.png')
+plt.savefig('loss_ckfer.png')
 
 plt.clf()
 

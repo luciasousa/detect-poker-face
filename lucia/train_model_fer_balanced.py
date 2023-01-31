@@ -83,7 +83,7 @@ img_data_list = []
 img_names = []
 count_neutral = 0
 count_emotion = 0
-
+'''
 #data augmentation increase the number of images by applying different transformations to the original images
 #zoom range: randomly zooming inside pictures
 #crop range: randomly cropping images
@@ -105,7 +105,7 @@ generator = datagen.flow_from_directory(
     class_mode='binary',
     save_to_dir='../../augmented',
     save_format='jpg')
-
+'''
 #read all images into array
 for label in labels:
     img_list=os.listdir(datapath+'/'+ label+'/')
@@ -127,10 +127,10 @@ for label in labels:
             #SECOND - process the image, rotate, crop, increase contrast, remove noise
             for i in range(0,len(shape)):
                 #Stage 0: Raw Set
-                #img_data_list.append(gray_image)
+                img_data_list.append(gray_image)
 
                 #Stage 1: Rotation Correction Set
-                rotated_img, landmarks = rotate(gray_image, shape[i])
+                #rotated_img, landmarks = rotate(gray_image, shape[i])
                 #img_data_list.append(rotated_img)
 
                 #Stage 2: Cropped Set
@@ -142,12 +142,12 @@ for label in labels:
                 #img_data_list.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
-                eq_face = hist_eq(rotated_img)
+                #eq_face = hist_eq(rotated_img)
                 #img_data_list.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = cv2.GaussianBlur(eq_face, (3, 3), 0)
-                img_data_list.append(filtered_face)
+                #filtered_face = cv2.GaussianBlur(eq_face, (3, 3), 0)
+                #img_data_list.append(filtered_face)
 
                 img_names.append(label+'_'+img)
         if label == 'neutral':
@@ -158,6 +158,7 @@ for label in labels:
 print('count_neutral: ', count_neutral)
 print('count_emotion: ', count_emotion)
 
+'''
 #remove images from emotion folder to balance the dataset to 50/50 
 remove = count_emotion - count_neutral
 print('remove: ', remove)
@@ -171,7 +172,7 @@ if remove != 0:
         os.remove(datapath+'/notneutral/'+img)
         img_data_list.remove(img)
         img_names.remove('notneutral_'+img)
-    
+'''
 img_data = np.array(img_data_list)
 img_data = img_data.astype('float32')
 img_data = img_data/255
@@ -239,7 +240,7 @@ model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accur
 model.summary()
 
 #train the model
-history = model.fit(x_train, y_train, batch_size=64, epochs=100, validation_data=(x_val, y_val))
+history = model.fit(x_train, y_train, batch_size=4, epochs=50, validation_data=(x_val, y_val))
 #save the model
 model.save('../../model_lucia_fer.h5')
 

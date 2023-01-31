@@ -105,15 +105,15 @@ for label in labels:
             #SECOND - process the image, rotate, crop, increase contrast, remove noise
             for i in range(0,len(shape)):
                 #Stage 0: Raw Set
-                #img_data_list.append(gray_image)
+                img_data_list.append(gray_image)
 
                 #Stage 1: Rotation Correction Set
-                rotated_img, landmarks = rotate(gray_image, shape[i])
+                #rotated_img, landmarks = rotate(gray_image, shape[i])
                 #img_data_list.append(rotated_img)
 
                 #Stage 2: Cropped Set
-                cropped_face = crop_face(rotated_img, landmarks)
-                cropped_face = cv2.resize(cropped_face, (96, 96))
+                #cropped_face = crop_face(rotated_img, landmarks)
+                #cropped_face = cv2.resize(cropped_face, (96, 96))
                 #img_data_list.append(cropped_face)
 
                 #Stage 3: Intensity Normalization Set
@@ -121,12 +121,12 @@ for label in labels:
                 #img_data_list.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
-                eq_face = hist_eq(cropped_face)
+                #eq_face = hist_eq(cropped_face)
                 #img_data_list.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = cv2.GaussianBlur(eq_face, (3, 3), 0)
-                img_data_list.append(filtered_face)
+                #filtered_face = cv2.GaussianBlur(eq_face, (3, 3), 0)
+                #img_data_list.append(filtered_face)
 
         img_names.append(label+'_'+img)
         if label == 'neutral':
@@ -136,7 +136,7 @@ for label in labels:
 
 print('count_neutral: ', count_neutral)
 print('count_emotion: ', count_emotion)
-
+"""
 #remove images from neutral folder to balance the dataset to 50/50 
 remove = count_neutral - count_emotion
 print('remove: ', remove)
@@ -150,7 +150,7 @@ if remove != 0:
         #remove image from neutral folder
         os.remove(datapath+'/neutral/'+img)
         img_names.remove('neutral_'+img)
-    
+"""  
 img_data = np.array(img_data_list)
 img_data = img_data.astype('float32')
 img_data = img_data/255

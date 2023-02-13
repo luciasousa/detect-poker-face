@@ -18,23 +18,15 @@ import dlib
 
 clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
 
-# Preprocessing block
 def hist_eq(img):
-	#call the .apply method on the CLAHE object to apply histogram equalization
     return clahe.apply(img)
 
-# Convert the facial landmarks dlib format to numpy
 def shape_to_np(shape):
-	# pre-trained facial landmark detector inside the dlib library is used to estimate the location of 68 (x, y)-coordinates
-	# that map to facial structures on the face
 	landmarks = np.zeros((68,2), dtype = int)
 	for i in range(0,68):
 		landmarks[i] = (shape.part(i).x, shape.part(i).y)
 	return landmarks
 
-# take the bounding box predicted by dlib library
-# and convert it into (x, y, w, h) where x, y are coordinates
-# and w, h are width and height
 def rect_to_bb(rect):
 	x = rect.left()
 	y = rect.top()
@@ -42,7 +34,6 @@ def rect_to_bb(rect):
 	h = rect.bottom() - y
 	return (x, y, w, h)
 
-# Rotation correction
 def rotate(gray_image, shape):
 	dY = shape[36][1] - shape[45][1]
 	dX = shape[36][0] - shape[45][0]
@@ -85,6 +76,7 @@ count_emotion = 0
 
 
 '''
+
 alpha = 1.5 # Contrast control
 beta = 10 # Brightness control
 
@@ -100,7 +92,7 @@ for label in labels:
             input_img_resize=cv2.resize(input_img,(96,96))
 
             #save image to folder
-            cv2.imwrite(datapath + '/'+ label + '/'+ img+'_alpha_15_beta_10', input_img_resize)
+            cv2.imwrite(datapath + '/'+ label + '/' + 'alpha_15_beta_10' + img, input_img_resize)
 
 alpha = 0.5 # Contrast control
 beta = 10 # Brightness control
@@ -116,7 +108,7 @@ for label in labels:
             input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
             input_img_resize=cv2.resize(input_img,(96,96))
             #save image to folder
-            cv2.imwrite(datapath + '/'+ label + '/'+ img +'_alpha_05_beta_10', input_img_resize)
+            cv2.imwrite(datapath + '/'+ label + '/' +'alpha_05_beta_10'+ img , input_img_resize)
 
     if label == 'notneutral':
         img_list=os.listdir(datapath+'/'+ label+'/')
@@ -129,7 +121,8 @@ for label in labels:
             input_img_resize=cv2.resize(input_img,(96,96))
 
             #save image to folder
-            cv2.imwrite(datapath + '/'+ label + '/'+ img+'_alpha_15_beta_10', input_img_resize)
+            cv2.imwrite(datapath + '/'+ label + '/' + 'alpha_15_beta_10'+ img, input_img_resize)
+
 '''
 #read all images into array
 for label in labels:

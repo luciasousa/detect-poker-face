@@ -1,4 +1,3 @@
-#train model with CNN architecture
 import os
 import cv2
 import matplotlib.pyplot as plt
@@ -15,12 +14,13 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import dlib
 
-
 clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
 
 # Preprocessing block
 def hist_eq(img):
 	#call the .apply method on the CLAHE object to apply histogram equalization
+    if img.dtype != np.uint8:
+        img = img.astype(np.uint8)
     return clahe.apply(img)
 
 def smooth(img):
@@ -99,9 +99,8 @@ def cropping(rotated_img, shape):
 	roi = rotated_img[tl[1]:br[1],tl[0]:br[0]]
 	return roi
 
-
 #define datapath
-datapath = '../../dataset_ferck'
+datapath = '../../FER2013_binary'
 data_dir_list = os.listdir(datapath)
 labels = sorted(data_dir_list)
 img_data_list = []
@@ -125,27 +124,83 @@ img_data_list5 = []
 accuracy_stage5 = []
 loss_stage5 = []
 
-
-
-#read all images into array
 for label in labels:
     print(label)
     img_list=os.listdir(datapath+'/'+ label+'/')
     print ('Loaded the images of dataset-'+'{}\n'.format(label))
     for img in img_list:
         input_img=cv2.imread(datapath + '/'+ label + '/'+ img )
-        input_img = cv2.resize(input_img, (96, 96))
+        input_img = cv2.resize(input_img, (48, 48))
         gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         img_names.append(label+'_'+img)
-        img_data_list.append(gray_image)
-        
-img_data = np.array(img_data_list)
-img_data = img_data.astype('float32')
-img_data = img_data/255
-img_data.shape
+        shape = []
+        bb = []
+        dets = detector(input_img, 1)
+        _, scores, idx = detector.run(input_img, 1, -1)
+        for i, d in enumerate(dets):
+            print("Detection {}: Left: {} Top: {} Right: {} Bottom: {} Confidence: {}".format(i, d.left(), d.top(), d.right(), d.bottom(), scores[i]))
+            if d is not None and d.top() >= 0 and d.right() <= input_img.shape[1] and d.bottom() <= input_img.shape[0] and d.left() >= 0:
+                predicted = predictor(input_img, d)
+                shape.append(shape_to_np(predicted))
+                (x, y, w, h) = rect_to_bb(d)
+                bb.append((x, y, w, h))
+                cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            #SECOND - process the image, rotate, crop, increase contrast, remove noise
+            for j in range(0,len(shape)):
+                #Stage 0: Raw Set
+                img_data_list1.append(gray_image)
+                #cv2.imshow("image", gray_image)
+                #print("image: ", img)
+                #cv2.waitKey(0)
+
+                #Stage 1: Rotation Correction Set
+                rotated_img, landmarks = rotate(gray_image, shape[i])
+                img_data_list2.append(rotated_img)
+
+                #Stage 2: Cropped Set
+                #cropped_face = cropping(rotated_img, landmarks)
+                #not the cropped face with shape 0
+                #cropped_face = cv2.resize(cropped_face, (48, 48))
+                #cropped_face to correct type 
+                #img_data_list3.append(cropped_face)
+
+                #Stage 3: Intensity Normalization Set
+                #daniel não tem isto
+                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #img_data_list.append(image_norm)
+
+                #Stage 4: Histogram Equalization Set
+                eq_face = hist_eq(rotated_img)
+                img_data_list4.append(eq_face)
+
+                #Stage 5: Smoothed Set
+                filtered_face = smooth(eq_face)
+                img_data_list5.append(filtered_face)
+
+                img_names.append(label+'_'+img)
+		
+img_data1 = np.array(img_data_list1)
+img_data1 = img_data1.astype('float32')
+img_data1 = img_data1/255
+img_data1.shape
+
+img_data2 = np.array(img_data_list2)
+img_data2 = img_data2.astype('float32')
+img_data2 = img_data2/255
+img_data2.shape
+
+img_data4 = np.array(img_data_list4)
+img_data4 = img_data4.astype('float32')
+img_data4 = img_data4/255
+img_data4.shape
+
+img_data5 = np.array(img_data_list5)
+img_data5 = img_data5.astype('float32')
+img_data5 = img_data5/255
+img_data5.shape
 
 num_classes = 2
-num_of_samples = img_data.shape[0]
+num_of_samples = img_data1.shape[0]
 
 print("number of samples: ",num_of_samples)
 
@@ -169,17 +224,33 @@ for i in range(num_of_samples):
     
 
 y = utils.to_categorical(labels_int, num_classes) 
-print(img_data.shape)
+print(img_data1.shape)
+print(img_data2.shape)
+print(img_data4.shape)
+print(img_data5.shape)
 print(y.shape)
 
 #split the data into train and test and validation
-x_train1, x_test1, y_train1, y_test1 = train_test_split(img_data, y, test_size=0.2,shuffle=True, random_state=2)
+x_train1, x_test1, y_train1, y_test1 = train_test_split(img_data1, y, test_size=0.2,shuffle=True, random_state=2)
 x_train1, x_val1, y_train1, y_val1 = train_test_split(x_train1, y_train1, test_size=0.1, shuffle=True, random_state=2)
-IMAGE_SIZE = [96,96]
+
+
+x_train2, x_test2, y_train2, y_test2 = train_test_split(img_data2, y, test_size=0.2,shuffle=True, random_state=2)
+x_train2, x_val2, y_train2, y_val2 = train_test_split(x_train2, y_train2, test_size=0.1, shuffle=True, random_state=2)
+
+
+x_train4, x_test4, y_train4, y_test4 = train_test_split(img_data4, y, test_size=0.2,shuffle=True, random_state=2)
+x_train4, x_val4, y_train4, y_val4 = train_test_split(x_train4, y_train4, test_size=0.1, shuffle=True, random_state=2)
+
+
+x_train5, x_test5, y_train5, y_test5 = train_test_split(img_data5, y, test_size=0.2,shuffle=True, random_state=2)
+x_train5, x_val5, y_train5, y_val5 = train_test_split(x_train5, y_train5, test_size=0.1, shuffle=True, random_state=2)
+
+IMAGE_SIZE = [48,48]
 
 model = Sequential(  
     [
-        Input(shape=(96,96,1)),
+        Input(shape=(48,48,1)),
         layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
@@ -215,29 +286,69 @@ score = model.evaluate(x_val1, y_val1)
 print("Validation loss stage 1:", score[0])
 print("Validation accuracy stage 1:", score[1])
 
+history2 = model.fit(x_train2, y_train2, batch_size=4, epochs=50, validation_data=(x_val2, y_val2))
+score = model.evaluate(x_test2, y_test2)
+print("Test loss stage 2:", score[0])
+print("Test accuracy stage 2:", score[1])
+
+#print train accuracy
+score = model.evaluate(x_train2, y_train2)
+print("Train loss stage 2:", score[0])
+print("Train accuracy stage 2:", score[1])
+
+#print validation accuracy
+score = model.evaluate(x_val2, y_val2)
+print("Validation loss stage 2:", score[0])
+print("Validation accuracy stage 2:", score[1])
+
+history4 = model.fit(x_train4, y_train4, batch_size=4, epochs=50, validation_data=(x_val4, y_val4))
+score = model.evaluate(x_test4, y_test4)
+print("Test loss stage 4:", score[0])
+print("Test accuracy stage 4:", score[1])
+
+#print train accuracy
+score = model.evaluate(x_train4, y_train4)
+print("Train loss stage 4:", score[0])
+print("Train accuracy stage 4:", score[1])
+
+#print validation accuracy
+score = model.evaluate(x_val4, y_val4)
+print("Validation loss stage 4:", score[0])
+print("Validation accuracy stage 4:", score[1])
+
+history5 = model.fit(x_train5, y_train5, batch_size=4, epochs=50, validation_data=(x_val5, y_val5))
+score = model.evaluate(x_test5, y_test5)
+print("Test loss stage 5:", score[0])
+print("Test accuracy stage 5:", score[1])
+
+#print train accuracy
+score = model.evaluate(x_train5, y_train5)
+print("Train loss stage 5:", score[0])
+print("Train accuracy stage 5:", score[1])
+
+#print validation accuracy
+score = model.evaluate(x_val5, y_val5)
+print("Validation loss stage 5:", score[0])
+print("Validation accuracy stage 5:", score[1])
 
 #plot the accuracy for all stages in one plot 
 plt.plot(history1.history['accuracy'])
-plt.plot(history1.history['val_accuracy'])
+plt.plot(history2.history['accuracy'])
+plt.plot(history4.history['accuracy'])
+plt.plot(history5.history['accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'validation'], loc='upper left')
+plt.legend(['phase 0', 'phase 1', 'phase 2', 'phase 3'], loc='upper left')
 plt.show()
-plt.clf()
 
 #plot the loss for all stages in one plot
 plt.plot(history1.history['loss'])
-plt.plot(history1.history['val_loss'])
+plt.plot(history2.history['loss'])
+plt.plot(history4.history['loss'])
+plt.plot(history5.history['loss'])
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
-plt.legend(['train', 'validation'], loc='upper left')
+plt.legend(['phase 0', 'phase 1', 'phase 2', 'phase 3'], loc='upper left')
 plt.show()
-
-#predict the test set and print the classification report and confusion matrix with number of classes 2 (neutral and not neutral) and target names neutral and not neutral 
-#y_pred = model.predict(x_test)
-#y_pred = np.argmax(y_pred, axis=1)
-#y_test = np.argmax(y_test, axis=1)
-#print(classification_report(y_test, y_pred, target_names=names))
-#print(confusion_matrix(y_test, y_pred))

@@ -84,14 +84,14 @@ for label in labels:
         input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         #change intensity of image
         alpha = 1.5 # Contrast control
-        beta = 2 # Brightness control
+        beta = 5 # Brightness control
         img_temp1 = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
         #save image to folder
-        cv2.imwrite(datapath + '/'+ label + '/'+ img +'_alpha_15_beta_10', img_temp1)
-        alpha = 2.0 # Contrast control
-        beta = 5 # Brightness control
+        cv2.imwrite(datapath + '/'+ label + '/' +'beta_5'+ img, img_temp1)
+        alpha = 0.5 # Contrast control
+        beta = 10 # Brightness control
         img_temp2 = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
-        cv2.imwrite(datapath + '/'+ label + '/'+ img+'_alpha_2_beta_10', img_temp2)
+        cv2.imwrite(datapath + '/'+ label + '/'+'beta_10'+ img, img_temp2)
 
 
 for label in labels:
@@ -204,6 +204,8 @@ plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('accuracy_fer.png')
+#show
+plt.show()
 
 #clear plot
 plt.clf()

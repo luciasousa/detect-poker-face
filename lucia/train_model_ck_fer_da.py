@@ -125,8 +125,6 @@ img_data_list5 = []
 accuracy_stage5 = []
 loss_stage5 = []
 
-
-
 #read all images into array
 for label in labels:
     print(label)

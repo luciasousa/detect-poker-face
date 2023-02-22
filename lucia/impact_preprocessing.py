@@ -166,11 +166,11 @@ for label in labels:
 
                 #Stage 3: Intensity Normalization Set
                 #daniel não tem isto
-                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
-                #img_data_list.append(image_norm)
+                image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                img_data_list3.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
-                eq_face = hist_eq(rotated_img)
+                eq_face = hist_eq(image_norm)
                 img_data_list4.append(eq_face)
 
                 #Stage 5: Smoothed Set
@@ -188,6 +188,11 @@ img_data2 = np.array(img_data_list2)
 img_data2 = img_data2.astype('float32')
 img_data2 = img_data2/255
 img_data2.shape
+
+img_data3 = np.array(img_data_list3)
+img_data3 = img_data3.astype('float32')
+img_data3 = img_data3/255
+img_data3.shape
 
 img_data4 = np.array(img_data_list4)
 img_data4 = img_data4.astype('float32')
@@ -226,6 +231,7 @@ for i in range(num_of_samples):
 y = utils.to_categorical(labels_int, num_classes) 
 print(img_data1.shape)
 print(img_data2.shape)
+print(img_data3.shape)
 print(img_data4.shape)
 print(img_data5.shape)
 print(y.shape)
@@ -238,10 +244,11 @@ x_train1, x_val1, y_train1, y_val1 = train_test_split(x_train1, y_train1, test_s
 x_train2, x_test2, y_train2, y_test2 = train_test_split(img_data2, y, test_size=0.2,shuffle=True, random_state=2)
 x_train2, x_val2, y_train2, y_val2 = train_test_split(x_train2, y_train2, test_size=0.1, shuffle=True, random_state=2)
 
+x_train3, x_test3, y_train3, y_test3 = train_test_split(img_data3, y, test_size=0.2,shuffle=True, random_state=2)
+x_train3, x_val3, y_train3, y_val3 = train_test_split(x_train3, y_train3, test_size=0.1, shuffle=True, random_state=2)
 
 x_train4, x_test4, y_train4, y_test4 = train_test_split(img_data4, y, test_size=0.2,shuffle=True, random_state=2)
 x_train4, x_val4, y_train4, y_val4 = train_test_split(x_train4, y_train4, test_size=0.1, shuffle=True, random_state=2)
-
 
 x_train5, x_test5, y_train5, y_test5 = train_test_split(img_data5, y, test_size=0.2,shuffle=True, random_state=2)
 x_train5, x_val5, y_train5, y_val5 = train_test_split(x_train5, y_train5, test_size=0.1, shuffle=True, random_state=2)
@@ -301,6 +308,21 @@ score = model.evaluate(x_val2, y_val2)
 print("Validation loss stage 2:", score[0])
 print("Validation accuracy stage 2:", score[1])
 
+history3 = model.fit(x_train3, y_train3, batch_size=4, epochs=50, validation_data=(x_val3, y_val3))
+score = model.evaluate(x_test3, y_test3)
+print("Test loss stage 3:", score[0])
+print("Test accuracy stage 3:", score[1])
+
+#print train accuracy
+score = model.evaluate(x_train3, y_train3)
+print("Train loss stage 3:", score[0])
+print("Train accuracy stage 3:", score[1])
+
+#print validation accuracy
+score = model.evaluate(x_val3, y_val3)
+print("Validation loss stage 3:", score[0])
+print("Validation accuracy stage 3:", score[1])
+
 history4 = model.fit(x_train4, y_train4, batch_size=4, epochs=50, validation_data=(x_val4, y_val4))
 score = model.evaluate(x_test4, y_test4)
 print("Test loss stage 4:", score[0])
@@ -334,21 +356,23 @@ print("Validation accuracy stage 5:", score[1])
 #plot the accuracy for all stages in one plot 
 plt.plot(history1.history['accuracy'])
 plt.plot(history2.history['accuracy'])
+plt.plot(history3.history['accuracy'])
 plt.plot(history4.history['accuracy'])
 plt.plot(history5.history['accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['phase 0', 'phase 1', 'phase 2', 'phase 3'], loc='upper left')
+plt.legend(['phase 0', 'phase 1', 'phase 2', 'phase 3', 'phase 4'], loc='upper left')
 plt.show()
 
 #plot the loss for all stages in one plot
 plt.plot(history1.history['loss'])
 plt.plot(history2.history['loss'])
+plt.plot(history3.history['loss'])
 plt.plot(history4.history['loss'])
 plt.plot(history5.history['loss'])
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
-plt.legend(['phase 0', 'phase 1', 'phase 2', 'phase 3'], loc='upper left')
+plt.legend(['phase 0', 'phase 1', 'phase 2', 'phase 3', 'phase 4'], loc='upper left')
 plt.show()

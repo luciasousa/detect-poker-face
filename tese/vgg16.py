@@ -1,10 +1,9 @@
-#pretrained model VGG16 fine-tuning with a dataset to train the model and test the model
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Input, Dense, Flatten, Dropout
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.applications.vgg16 import VGG16
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential, Model
+from keras.layers import Input, Dense, Flatten, Dropout
+from keras.optimizers import Adam
+from keras.applications.vgg16 import VGG16
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -15,7 +14,7 @@ test_dir = '../../CK_binary'
 
 # Define image size and batch size
 img_size = (224, 224)
-batch_size = 64
+batch_size = 32
 
 train_datagen = ImageDataGenerator(rescale=1./255,
                                    shear_range=0.2,
@@ -39,13 +38,14 @@ test_generator = test_datagen.flow_from_directory(
 # Load pre-trained VGG16 model without the top layers
 base_model = VGG16(weights='imagenet', include_top=False, input_tensor=Input(shape=(img_size[0], img_size[1], 3)))
 
-# Freeze the pre-trained layers
-for layer in base_model.layers:
+# Freeze layers up to the last convolutional block of VGG16
+for layer in base_model.layers[:-4]:
     layer.trainable = False
 
-# Add top layers for binary classification
-x = Flatten()(base_model.output)
-x = Dense(256, activation='relu')(x)
+#add top layers to the base model
+x = base_model.output
+x = Flatten()(x)
+x = Dense(1024, activation='relu')(x)
 x = Dropout(0.5)(x)
 x = Dense(1, activation='sigmoid')(x)
 
@@ -53,10 +53,10 @@ x = Dense(1, activation='sigmoid')(x)
 model = Model(inputs=base_model.input, outputs=x)
 
 # Compile the model with binary cross-entropy loss and Adam optimizer
-model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 # Train the model on the training set
-history = model.fit(train_generator, epochs=10, validation_data=test_generator)
+history = model.fit(train_generator, epochs=5, validation_data=test_generator)
 
 # Evaluate the model on the test set
 test_loss, test_acc = model.evaluate(test_generator)
@@ -80,3 +80,7 @@ plt.legend()
 plt.subplot(1, 2, 2)
 plt.plot(epochs, loss, 'r', label='Training loss')
 plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.legend()
+
+plt.show()

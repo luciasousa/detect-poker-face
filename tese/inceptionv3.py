@@ -15,7 +15,7 @@ import pandas as pd
 import os
 import shutil
 import random
-
+import math
 
 num_classes = 2
 
@@ -53,7 +53,7 @@ val_generator = val_datagen.flow_from_directory(
     target_size=(299, 299),
     batch_size=1,
     class_mode='categorical',
-    shuffle=True
+    shuffle=False
 )
 
 test_generator = test_datagen.flow_from_directory(
@@ -88,41 +88,49 @@ model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy
 k = 5
 
 # Get the list of directories in the training dataset
-class_directories = os.listdir(train_dataset)
+class_directories_train = os.listdir(train_dataset)
 
 # Split each class directory into k parts
-class_parts = []
-for class_dir in class_directories:
+class_parts_train = []
+for class_dir in class_directories_train:
     class_path = os.path.join(train_dataset, class_dir)
     class_files = os.listdir(class_path)
     random.shuffle(class_files)  # Shuffle the files to ensure randomness
-    class_parts.append(np.array_split(class_files, k))
+    class_parts_train.append(np.array_split(class_files, k))
 
-# Concatenate the corresponding parts from each class to form the k folds
+# Get the list of directories in the training dataset
+class_directories_val = os.listdir(val_dataset)
+
+# Split each class directory into k parts
+class_parts_val = []
+for class_dir in class_directories_val:
+    class_path = os.path.join(val_dataset, class_dir)
+    class_files = os.listdir(class_path)
+    random.shuffle(class_files)  # Shuffle the files to ensure randomness
+    class_parts_val.append(np.array_split(class_files, k))
+
 k_folds = []
 for i in range(k):
     train_files = []
     val_files = []
-    for j, class_dir in enumerate(class_directories):
-        class_part = class_parts[j][i]
-        if j == 0:
-            train_files += [os.path.join(train_dataset,class_dir, filename) for filename in class_part]
-        else:
-            val_files += [os.path.join(val_dataset,class_dir, filename) for filename in class_part]
+    for j, class_dir_train in enumerate(class_directories_train):
+        class_part_train = class_parts_train[j][i]
+        train_files += [os.path.join(train_dataset,class_dir_train, filename) for filename in class_part_train]
+    for k, class_dir_val in enumerate(class_directories_val):
+        class_part_val = class_parts_val[k][i]
+        val_files += [os.path.join(val_dataset, class_dir_val, filename) for filename in class_part_val]
     train_labels = [os.path.split(os.path.dirname(file))[1] for file in train_files]
     val_labels = [os.path.split(os.path.dirname(file))[1] for file in val_files]
     train_df = pd.DataFrame({"filename": train_files, "class": train_labels})
     val_df = pd.DataFrame({"filename": val_files, "class": val_labels})
-    #print(train_df)
-    #print(val_df)
     k_folds.append((train_df, val_df))
-    #print(k_folds)
 
 
 # Perform k-fold cross-validation
 for fold, (train_df, val_df) in enumerate(k_folds):
     print("Fold ", fold+1)
-    
+    #print("Train ", train_df)
+    #print("Val ", val_df)
     train_generator = ImageDataGenerator(preprocessing_function=preprocess_input).flow_from_dataframe(
         train_df,
         x_col="filename",
@@ -147,9 +155,8 @@ for fold, (train_df, val_df) in enumerate(k_folds):
         validation_steps=len(val_generator))
 
     # Evaluate the model on the validation set for this fold
-    scores = model.evaluate(val_generator, steps=len(val_generator), verbose=0)
+    scores = model.evaluate(val_generator, steps=len(val_generator))
     print(f"Validation accuracy for fold {fold+1}: {scores[1]*100}%")
-    
 
 # Unfreeze all layers of the model
 for layer in inception_model.layers:
@@ -168,29 +175,3 @@ model.save('./inceptionv3.h5')
 #evaluate the model on the test dataset
 model.evaluate(test_generator)
 
-#plot the accuracy and loss
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-#save
-plt.savefig('accuracy_inceptionv3.png')
-
-#clear plot
-plt.clf()
-
-
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-
-#save
-plt.savefig('loss_inceptionv3.png')
-
-#clear plot
-plt.clf()

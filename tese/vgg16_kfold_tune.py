@@ -3,7 +3,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential, Model
 from keras.layers import Input, Dense, Flatten, Dropout, GlobalAveragePooling2D
 from keras.optimizers import Adam
-from keras.applications.resnet import ResNet50, preprocess_input
+from keras.applications.vgg16 import VGG16, preprocess_input
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.optimizers import SGD
@@ -18,10 +18,11 @@ import cv2
 
 
 num_classes = 2
-path_dataset = "../../main_dataset/"
-train_dataset = "../../main_dataset/train"
-test_dataset = "../../main_dataset/test"
-val_dataset = ".../../main_dataset/val"
+
+path_dataset = "../../../main_dataset/main_dataset/"
+train_dataset = "../../../main_dataset/main_dataset/train"
+test_dataset = "../../../main_dataset/main_dataset/test"
+val_dataset = "../../../main_dataset/main_dataset/val"
 
 train_datagen = ImageDataGenerator(
     rescale=1./255,
@@ -66,10 +67,10 @@ test_generator = test_datagen.flow_from_directory(
 class_weights = {0: 1., 1: 1.}
 
 # Load pre-trained VGG16 model without the top layers
-base_model = ResNet50(weights='imagenet', include_top=False)
+base_model = VGG16(weights='imagenet', include_top=False)
 
 # Freeze layers up to the last convolutional block of VGG16
-for layer in base_model.layers[:-22]:
+for layer in base_model.layers[:15]:
     layer.trainable = False
 
 #add top layers to the base model
@@ -181,10 +182,11 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 #save
-plt.savefig('accuracy_inceptionv3.png')
+plt.savefig('accuracy_vgg16.png')
 
 #clear plot
 plt.clf()
+
 
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
@@ -194,7 +196,15 @@ plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 
 #save
-plt.savefig('loss_inceptionv3.png')
+plt.savefig('loss_vgg16.png')
 
 #clear plot
 plt.clf()
+
+#predict the test set and print the classification report and confusion matrix with number of classes 2 (neutral and not neutral) and target names neutral and not neutral 
+y_pred = model.predict(test_generator)
+y_pred = np.argmax(y_pred, axis=1)
+print('Classification Report')
+print(classification_report(test_generator.classes, y_pred, target_names=['neutral', 'notneutral']))
+print('Confusion Matrix')
+print(confusion_matrix(test_generator.classes, y_pred))

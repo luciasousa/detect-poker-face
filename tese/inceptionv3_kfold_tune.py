@@ -3,13 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import tensorflow as tf
-from keras.applications import InceptionV3
+print(tf.__version__)
+from tensorflow.keras.applications import InceptionV3
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications.inception_v3 import preprocess_input
 from keras.layers import Input, GlobalAveragePooling2D, Dense, Multiply
 from keras.models import Model
 from keras.models import load_model
-from keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold, train_test_split
 import pandas as pd
@@ -20,11 +21,11 @@ import math
 
 num_classes = 2
 
-path_dataset = "../../../main_dataset/main_dataset/"
+path_dataset = "../../main_dataset/"
 
-train_dataset = "../../../main_dataset/main_dataset/train"
-test_dataset = "../../../main_dataset/main_dataset/test"
-val_dataset = "../../../main_dataset/main_dataset/val"
+train_dataset = "../../main_dataset/train"
+test_dataset = "../../main_dataset/test"
+val_dataset = "../../main_dataset/val"
 
 train_datagen = ImageDataGenerator(
     rescale=1./255,
@@ -89,9 +90,9 @@ opt = SGD(lr=0.001, momentum=0.9)
 model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 
 ''' K-FOLD CROSS VALIDATION'''
-"""
+
 # Define the number of folds
-k = 3
+k = 5
 
 # Get the list of directories in the training dataset
 class_directories_train = os.listdir(train_dataset)
@@ -142,14 +143,14 @@ for fold, (train_df, val_df) in enumerate(k_folds):
         x_col="filename",
         y_col="class",
         target_size=(224, 224),
-        batch_size=64,
+        batch_size=32,
         shuffle=True)
     val_generator = ImageDataGenerator(preprocessing_function=preprocess_input).flow_from_dataframe(
         val_df,
         x_col="filename",
         y_col="class",
         target_size=(224, 224),
-        batch_size=64,
+        batch_size=32,
         shuffle=False)
 
     # Train the model for this fold
@@ -163,7 +164,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     # Evaluate the model on the validation set for this fold
     scores = model.evaluate(val_generator, steps=len(val_generator))
     print(f"Validation accuracy for fold {fold+1}: {scores[1]*100}%")
-"""
+
 '''END OF K-FOLD CROSS VALIDATION'''
 
 '''FINE TUNING'''
@@ -180,7 +181,7 @@ model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy
 history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
-model.save('./inceptionv3.h5')
+model.save('../../inceptionv3.h5')
 
 #evaluate the model on the test dataset
 model.evaluate(test_generator)

@@ -2,11 +2,11 @@ import tensorflow as tf
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential, Model
 from keras.layers import Input, Dense, Flatten, Dropout, GlobalAveragePooling2D
-from keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam
 from keras.applications.vgg16 import VGG16, preprocess_input
 import numpy as np
 import matplotlib.pyplot as plt
-from keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold, train_test_split
 import pandas as pd
@@ -19,10 +19,10 @@ import cv2
 
 num_classes = 2
 
-path_dataset = "../../../main_dataset/main_dataset/"
-train_dataset = "../../../main_dataset/main_dataset/train"
-test_dataset = "../../../main_dataset/main_dataset/test"
-val_dataset = "../../../main_dataset/main_dataset/val"
+path_dataset = "../../main_dataset/"
+train_dataset = "../../main_dataset/train"
+test_dataset = "../../main_dataset/test"
+val_dataset = "../../main_dataset/val"
 
 train_datagen = ImageDataGenerator(
     rescale=1./255,
@@ -73,12 +73,15 @@ base_model = VGG16(weights='imagenet', include_top=False)
 for layer in base_model.layers[:15]:
     layer.trainable = False
 
+for layer in base_model.layers[15:]:
+    layer.trainable = True
+
 #add top layers to the base model
 x = GlobalAveragePooling2D()(base_model.output)
 x = Dense(128, activation='relu')(x)
 output = Dense(num_classes, activation='softmax')(x)
 # Create new model with the VGG16 base and the top layers
-model = Model(inputs=base_model.input, outputs=x)
+model = Model(inputs=base_model.input, outputs=output)
 
 # Compile the model with a low learning rate
 opt = SGD(lr=0.001, momentum=0.9)
@@ -149,7 +152,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     model.fit(
         train_generator,
         steps_per_epoch=len(train_generator),
-        epochs=10,
+        epochs=5,
         validation_data=val_generator,
         validation_steps=len(val_generator))
 

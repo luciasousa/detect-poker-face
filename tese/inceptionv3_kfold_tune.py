@@ -19,6 +19,23 @@ import shutil
 import random
 import math
 
+#To Improve
+"""
+Increase the number of epochs during training: 
+The current code only trains the model for a single epoch, 
+which may not be enough for the model to converge to its optimal weights. 
+You can try increasing the number of epochs and monitor the validation accuracy to determine if the model is still improving.
+
+Fine-tune more layers of the pre-trained model: 
+The current code freezes the first 279 layers of the InceptionV3 model, 
+which may not be enough for the model to learn the features necessary for the emotion classification task. 
+You can try unfreezing more layers and fine-tuning the model to improve its performance.
+
+Adjust the learning rate: 
+The learning rate determines the step size taken during training and can have a significant impact on the training process. 
+You can try adjusting the learning rate to find a value that helps the model converge faster and improve its performance.
+"""
+
 num_classes = 2
 
 path_dataset = "../../main_dataset/"
@@ -28,14 +45,14 @@ test_dataset = "../../main_dataset/test"
 val_dataset = "../../main_dataset/val"
 
 train_datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    vertical_flip=True,
     rescale=1./255,
-    rotation_range=10, # randomly rotate images by up to 10 degrees
-    zoom_range=0.1, # randomly zoom in by up to 10%
-    width_shift_range=0.1, # randomly shift images horizontally by up to 10%
-    height_shift_range=0.1, # randomly shift images vertically by up to 10%
-    shear_range=0.1, # randomly shear images by up to 10%
-    horizontal_flip=True, # randomly flip images horizontally
-    fill_mode='nearest' # fill any empty pixels with the nearest valid pixel
+    brightness_range=[0.5, 1.5], # add brightness augmentation
 )
 
 val_datagen = ImageDataGenerator(rescale=1./255)
@@ -45,15 +62,14 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 train_generator = train_datagen.flow_from_directory(
     train_dataset,
     target_size=(299, 299),
-    batch_size=1,
-    class_mode='categorical',
-    shuffle=True
+    batch_size=32,
+    class_mode='categorical'
 )
 
 val_generator = val_datagen.flow_from_directory(
     val_dataset,
     target_size=(299, 299),
-    batch_size=1,
+    batch_size=32,
     class_mode='categorical',
     shuffle=False
 )
@@ -61,7 +77,7 @@ val_generator = val_datagen.flow_from_directory(
 test_generator = test_datagen.flow_from_directory(
     test_dataset,
     target_size=(299, 299),
-    batch_size=1,
+    batch_size=32,
     class_mode='categorical',
     shuffle=False
 )
@@ -142,14 +158,14 @@ for fold, (train_df, val_df) in enumerate(k_folds):
         train_df,
         x_col="filename",
         y_col="class",
-        target_size=(224, 224),
+        target_size=(299, 299),
         batch_size=32,
         shuffle=True)
     val_generator = ImageDataGenerator(preprocessing_function=preprocess_input).flow_from_dataframe(
         val_df,
         x_col="filename",
         y_col="class",
-        target_size=(224, 224),
+        target_size=(299, 299),
         batch_size=32,
         shuffle=False)
 
@@ -157,7 +173,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     model.fit(
         train_generator,
         steps_per_epoch=len(train_generator),
-        epochs=5,
+        epochs=10,
         validation_data=val_generator,
         validation_steps=len(val_generator))
 
@@ -178,7 +194,7 @@ opt = SGD(lr=0.0001, momentum=0.9)
 model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Fine-tune the model on your own dataset
-history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
+history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
 model.save('../../inceptionv3.h5')
@@ -217,6 +233,17 @@ plt.clf()
 y_pred = model.predict(test_generator)
 y_pred = np.argmax(y_pred, axis=1)
 print('Classification Report')
-print(classification_report(test_generator.classes, y_pred, target_names=['neutral', 'notneutral']))
+cr = classification_report(test_generator.classes, y_pred, target_names=['neutral', 'notneutral'])
+print(cr)
+cr.plot()
+plt.savefig('report_inceptionv3.png')
+
+plt.clf()
+
 print('Confusion Matrix')
-print(confusion_matrix(test_generator.classes, y_pred))
+cm = confusion_matrix(test_generator.classes, y_pred)
+print(cm)
+cm.plot()
+plt.savefig('matrix_inceptionv3.png')
+
+plt.clf()

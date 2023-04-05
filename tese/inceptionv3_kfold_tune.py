@@ -82,8 +82,37 @@ test_generator = test_datagen.flow_from_directory(
     shuffle=False
 )
 
+#define classes and print each class and number of samples
+classes = train_generator.class_indices
+print(classes)
+
+#count number of samples in each class
+
+"""
+
+            Neutro (18%)        Não Neutro (82%)
+
+Teste       1367                6110                7477 (20%)
+Treino      4909                21690               26599 (72%)
+Validação   545                 2409                2954 (8%)
+                                                    37030 (100%)
+
+"""
+
+neutral = 6821
+notneutral = 30209
+total = neutral + notneutral
+
+# Scaling by total/2 helps keep the loss to a similar magnitude.
+# The sum of the weights of all examples stays the same.
+weight_for_0 = (1 / neutral) * (total / 2.0)
+weight_for_1 = (1 / notneutral) * (total / 2.0)
+
+print('Weight for class 0: {:.2f}'.format(weight_for_0))
+print('Weight for class 1: {:.2f}'.format(weight_for_1))
+
 #higher weight for the class with less samples (neutral class)
-class_weights = {0: 1., 1: 1.}
+class_weights = {0: weight_for_0, 1: weight_for_1}
 
 # Load the InceptionV3 model without the top layer
 inception_model = InceptionV3(weights='imagenet', include_top=False)
@@ -173,7 +202,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     model.fit(
         train_generator,
         steps_per_epoch=len(train_generator),
-        epochs=10,
+        epochs=5,
         validation_data=val_generator,
         validation_steps=len(val_generator))
 
@@ -194,7 +223,7 @@ opt = SGD(lr=0.0001, momentum=0.9)
 model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Fine-tune the model on your own dataset
-history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights)
+history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
 model.save('../../inceptionv3.h5')
@@ -235,15 +264,7 @@ y_pred = np.argmax(y_pred, axis=1)
 print('Classification Report')
 cr = classification_report(test_generator.classes, y_pred, target_names=['neutral', 'notneutral'])
 print(cr)
-cr.plot()
-plt.savefig('report_inceptionv3.png')
-
-plt.clf()
 
 print('Confusion Matrix')
 cm = confusion_matrix(test_generator.classes, y_pred)
 print(cm)
-cm.plot()
-plt.savefig('matrix_inceptionv3.png')
-
-plt.clf()

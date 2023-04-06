@@ -106,6 +106,9 @@ train_dataset = "../../main_dataset/train"
 test_dataset = "../../main_dataset/test"
 val_dataset = "../../main_dataset/val"
 
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+
 train_datagen = ImageDataGenerator(
     rotation_range=20,
     width_shift_range=0.1,
@@ -143,6 +146,158 @@ test_generator = test_datagen.flow_from_directory(
     class_mode='categorical',
     shuffle=False
 )
+
+img_train_list = []
+img_val_list = []
+img_test_list = []
+
+img_train = []
+img_val = []
+img_test = []
+
+#for all images in each folder (train, test, val) apply the same preprocessing
+#and save the images in arrays
+for i in range(0, len(train_generator.filenames)):
+    img = cv2.imread(train_dataset + "/" + train_generator.filenames[i])
+    img = cv2.resize(img, (96, 96))
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    shape = []
+    bb = []
+    dets = detector(img, 1)
+    _, scores, idx = detector.run(img, 1, -1)
+    for i, d in enumerate(dets):
+	    if d is None and d.top() >= 0 and d.right() <= img.shape[1] and d.bottom() <= img.shape[0] and d.left >= 0:
+		    predicted = predictor(img, d)
+            shape.append(shape_to_np(predicted))
+            (x, y, w, h) = rect_to_bb(d)
+		    bb.append((x, y, w, h))
+		    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        for j in range(0, len(shape)):
+            #Stage 0: Raw Set
+            img_train_list.append(gray)
+	    
+            #Stage 1: Rotation Correction Set
+            #rotated_img, landmarks = rotate(gray_image, shape[i])
+            #img_data_list.append(rotated_img)
+
+            #Stage 2: Cropped Set
+            #cropped_face = cropping(rotated_img, landmarks)
+            #cropped_face = cv2.resize(cropped_face, (96, 96))
+            #img_data_list.append(cropped_face)
+
+            #Stage 3: Intensity Normalization Set
+            #daniel não tem isto
+            #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+            #img_data_list.append(image_norm)
+
+            #Stage 4: Histogram Equalization Set
+            #eq_face = hist_eq(cropped_face)
+            #img_data_list.append(eq_face)
+
+            #Stage 5: Smoothed Set
+            #filtered_face = smooth(eq_face)
+            #img_data_list.append(filtered_face)
+
+        
+img_train = np.array(img_train_list)
+img_train = img_train.astype('float32')
+img_train = img_train/255
+img_train.shape
+
+for i in range(0, len(val_generator.filenames)):
+    img = cv2.imread(val_dataset + "/" + val_generator.filenames[i])
+    img = cv2.resize(img, (96, 96))
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    shape = []
+    bb = []
+    dets = detector(img, 1)
+    _, scores, idx = detector.run(img, 1, -1)
+    for i, d in enumerate(dets):
+	    if d is None and d.top() >= 0 and d.right() <= img.shape[1] and d.bottom() <= img.shape[0] and d.left >= 0:
+		    predicted = predictor(img, d)
+            shape.append(shape_to_np(predicted))
+            (x, y, w, h) = rect_to_bb(d)
+		    bb.append((x, y, w, h))
+		    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        for j in range(0, len(shape)):
+            #Stage 0: Raw Set
+            img_val_list.append(gray)
+	    
+            #Stage 1: Rotation Correction Set
+            #rotated_img, landmarks = rotate(gray_image, shape[i])
+            #img_data_list.append(rotated_img)
+
+            #Stage 2: Cropped Set
+            #cropped_face = cropping(rotated_img, landmarks)
+            #cropped_face = cv2.resize(cropped_face, (96, 96))
+            #img_data_list.append(cropped_face)
+
+            #Stage 3: Intensity Normalization Set
+            #daniel não tem isto
+            #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+            #img_data_list.append(image_norm)
+
+            #Stage 4: Histogram Equalization Set
+            #eq_face = hist_eq(cropped_face)
+            #img_data_list.append(eq_face)
+
+            #Stage 5: Smoothed Set
+            #filtered_face = smooth(eq_face)
+            #img_data_list.append(filtered_face)
+
+        
+img_val = np.array(img_val_list)
+img_val = img_val.astype('float32')
+img_val = img_val/255
+img_val.shape
+
+for i in range(0, len(test_generator.filenames)):
+    img = cv2.imread(val_dataset + "/" + test_generator.filenames[i])
+    img = cv2.resize(img, (96, 96))
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    shape = []
+    bb = []
+    dets = detector(img, 1)
+    _, scores, idx = detector.run(img, 1, -1)
+    for i, d in enumerate(dets):
+	    if d is None and d.top() >= 0 and d.right() <= img.shape[1] and d.bottom() <= img.shape[0] and d.left >= 0:
+		    predicted = predictor(img, d)
+            shape.append(shape_to_np(predicted))
+            (x, y, w, h) = rect_to_bb(d)
+		    bb.append((x, y, w, h))
+		    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        for j in range(0, len(shape)):
+            #Stage 0: Raw Set
+            img_test_list.append(gray)
+	    
+            #Stage 1: Rotation Correction Set
+            #rotated_img, landmarks = rotate(gray_image, shape[i])
+            #img_data_list.append(rotated_img)
+
+            #Stage 2: Cropped Set
+            #cropped_face = cropping(rotated_img, landmarks)
+            #cropped_face = cv2.resize(cropped_face, (96, 96))
+            #img_data_list.append(cropped_face)
+
+            #Stage 3: Intensity Normalization Set
+            #daniel não tem isto
+            #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+            #img_data_list.append(image_norm)
+
+            #Stage 4: Histogram Equalization Set
+            #eq_face = hist_eq(cropped_face)
+            #img_data_list.append(eq_face)
+
+            #Stage 5: Smoothed Set
+            #filtered_face = smooth(eq_face)
+            #img_data_list.append(filtered_face)
+
+        
+img_test = np.array(img_test_list)
+img_test = img_test.astype('float32')
+img_test = img_test/255
+img_test.shape
+
 
 #define classes and print each class and number of samples
 classes = train_generator.class_indices

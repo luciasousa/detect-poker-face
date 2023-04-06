@@ -64,7 +64,25 @@ test_generator = test_datagen.flow_from_directory(
 )
 
 #higher weight for the class with less samples (neutral class)
-class_weights = {0: 1., 1: 1.}
+#class_weights = {0: 1., 1: 1.}
+
+#define classes and print each class and number of samples
+classes = train_generator.class_indices
+print(classes)
+
+neutral = 6821
+notneutral = 30209
+total = neutral + notneutral
+
+# Scaling by total/2 helps keep the loss to a similar magnitude.
+# The sum of the weights of all examples stays the same.
+weight_for_0 = (1 / neutral) * (total / 2.0)
+weight_for_1 = (1 / notneutral) * (total / 2.0)
+
+print('Weight for class 0: {:.2f}'.format(weight_for_0))
+print('Weight for class 1: {:.2f}'.format(weight_for_1))
+
+class_weights = {0: weight_for_0, 1: weight_for_1}
 
 # Load pre-trained VGG16 model without the top layers
 base_model = VGG16(weights='imagenet', include_top=False)
@@ -137,14 +155,14 @@ for fold, (train_df, val_df) in enumerate(k_folds):
         train_df,
         x_col="filename",
         y_col="class",
-        target_size=(224, 224),
+        target_size=(299, 299),
         batch_size=32,
         shuffle=True)
     val_generator = ImageDataGenerator(preprocessing_function=preprocess_input).flow_from_dataframe(
         val_df,
         x_col="filename",
         y_col="class",
-        target_size=(224, 224),
+        target_size=(299, 299),
         batch_size=32,
         shuffle=False)
 
@@ -172,7 +190,7 @@ model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy
 history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
-model.save('./vgg16.h5')
+model.save('../../vgg16.h5')
 
 #evaluate the model on the test dataset
 model.evaluate(test_generator)

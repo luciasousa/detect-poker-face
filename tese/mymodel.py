@@ -8,8 +8,6 @@ from keras import layers, utils, Input, Sequential
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout, GlobalAveragePooling2D
 from keras.models import Model
-from keras.utils import plot_model
-from IPython.display import Image
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import dlib
@@ -20,6 +18,8 @@ clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
 # Preprocessing block
 def hist_eq(img):
 	#call the .apply method on the CLAHE object to apply histogram equalization
+    if img.dtype != np.uint8:
+        img = img.astype(np.uint8)
     return clahe.apply(img)
 
 def smooth(img):
@@ -155,148 +155,165 @@ img_train = []
 img_val = []
 img_test = []
 
+labels = ['neutral', 'notneutral']
+
 #for all images in each folder (train, test, val) apply the same preprocessing
 #and save the images in arrays
-for i in range(0, len(train_generator.filenames)):
-    img = cv2.imread(train_dataset + "/" + train_generator.filenames[i])
-    img = cv2.resize(img, (96, 96))
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    shape = []
-    bb = []
-    dets = detector(img, 1)
-    _, scores, idx = detector.run(img, 1, -1)
-    for i, d in enumerate(dets):
-	    if d is None and d.top() >= 0 and d.right() <= img.shape[1] and d.bottom() <= img.shape[0] and d.left >= 0:
-		    predicted = predictor(img, d)
-            shape.append(shape_to_np(predicted))
-            (x, y, w, h) = rect_to_bb(d)
-		    bb.append((x, y, w, h))
-		    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        for j in range(0, len(shape)):
-            #Stage 0: Raw Set
-            img_train_list.append(gray)
-	    
-            #Stage 1: Rotation Correction Set
-            #rotated_img, landmarks = rotate(gray_image, shape[i])
-            #img_data_list.append(rotated_img)
+for label in labels:
+    img_train_list = os.listdir(train_dataset + "/" + label + "/")
+    for img in img_train_list:
+        input_img = cv2.imread(train_dataset + "/" + label + "/" + img)
+        input_img = cv2.resize(input_img, (48, 48))
+        gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+        shape = []
+        bb = []
+        dets = detector(input_img, 1)
+        _, scores, idx = detector.run(input_img, 1, -1)
+        for i, d in enumerate(dets):
+            if d is not None and d.top() >= 0 and d.right() <= input_img.shape[1] and d.bottom() <= input_img.shape[0] and d.left() >= 0:
+                predicted = predictor(input_img, d)
+                shape.append(shape_to_np(predicted))
+                (x, y, w, h) = rect_to_bb(d)
+                bb.append((x, y, w, h))
+                cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            for j in range(0,len(shape)):
+                #Stage 0: Raw Set
+                img_train.append(gray_image)
+                #cv2.imshow("image", gray_image)
+                #print("image: ", img)
+                #cv2.waitKey(0)
 
-            #Stage 2: Cropped Set
-            #cropped_face = cropping(rotated_img, landmarks)
-            #cropped_face = cv2.resize(cropped_face, (96, 96))
-            #img_data_list.append(cropped_face)
+                #Stage 1: Rotation Correction Set
+                #rotated_img, landmarks = rotate(gray_image, shape[i])
+                #img_data_list.append(rotated_img)
 
-            #Stage 3: Intensity Normalization Set
-            #daniel não tem isto
-            #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
-            #img_data_list.append(image_norm)
+                #Stage 2: Cropped Set
+                #cropped_face = cropping(rotated_img, landmarks)
+                #cropped_face = cv2.resize(cropped_face, (96, 96))
+                #img_data_list.append(cropped_face)
 
-            #Stage 4: Histogram Equalization Set
-            #eq_face = hist_eq(cropped_face)
-            #img_data_list.append(eq_face)
+                #Stage 3: Intensity Normalization Set
+                #daniel não tem isto
+                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #img_data_list.append(image_norm)
 
-            #Stage 5: Smoothed Set
-            #filtered_face = smooth(eq_face)
-            #img_data_list.append(filtered_face)
+                #Stage 4: Histogram Equalization Set
+                #eq_face = hist_eq(cropped_face)
+                #img_data_list.append(eq_face)
 
-        
-img_train = np.array(img_train_list)
-img_train = img_train.astype('float32')
-img_train = img_train/255
-img_train.shape
-
-for i in range(0, len(val_generator.filenames)):
-    img = cv2.imread(val_dataset + "/" + val_generator.filenames[i])
-    img = cv2.resize(img, (96, 96))
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    shape = []
-    bb = []
-    dets = detector(img, 1)
-    _, scores, idx = detector.run(img, 1, -1)
-    for i, d in enumerate(dets):
-	    if d is None and d.top() >= 0 and d.right() <= img.shape[1] and d.bottom() <= img.shape[0] and d.left >= 0:
-		    predicted = predictor(img, d)
-            shape.append(shape_to_np(predicted))
-            (x, y, w, h) = rect_to_bb(d)
-		    bb.append((x, y, w, h))
-		    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        for j in range(0, len(shape)):
-            #Stage 0: Raw Set
-            img_val_list.append(gray)
-	    
-            #Stage 1: Rotation Correction Set
-            #rotated_img, landmarks = rotate(gray_image, shape[i])
-            #img_data_list.append(rotated_img)
-
-            #Stage 2: Cropped Set
-            #cropped_face = cropping(rotated_img, landmarks)
-            #cropped_face = cv2.resize(cropped_face, (96, 96))
-            #img_data_list.append(cropped_face)
-
-            #Stage 3: Intensity Normalization Set
-            #daniel não tem isto
-            #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
-            #img_data_list.append(image_norm)
-
-            #Stage 4: Histogram Equalization Set
-            #eq_face = hist_eq(cropped_face)
-            #img_data_list.append(eq_face)
-
-            #Stage 5: Smoothed Set
-            #filtered_face = smooth(eq_face)
-            #img_data_list.append(filtered_face)
+                #Stage 5: Smoothed Set
+                #filtered_face = smooth(eq_face)
+                #img_data_list.append(filtered_face)
 
         
-img_val = np.array(img_val_list)
-img_val = img_val.astype('float32')
-img_val = img_val/255
-img_val.shape
+img_t= np.array(img_train)
+img_t = img_t.astype('float32')
+img_t = img_t/255
+img_t.shape
 
-for i in range(0, len(test_generator.filenames)):
-    img = cv2.imread(val_dataset + "/" + test_generator.filenames[i])
-    img = cv2.resize(img, (96, 96))
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    shape = []
-    bb = []
-    dets = detector(img, 1)
-    _, scores, idx = detector.run(img, 1, -1)
-    for i, d in enumerate(dets):
-	    if d is None and d.top() >= 0 and d.right() <= img.shape[1] and d.bottom() <= img.shape[0] and d.left >= 0:
-		    predicted = predictor(img, d)
-            shape.append(shape_to_np(predicted))
-            (x, y, w, h) = rect_to_bb(d)
-		    bb.append((x, y, w, h))
-		    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        for j in range(0, len(shape)):
-            #Stage 0: Raw Set
-            img_test_list.append(gray)
-	    
-            #Stage 1: Rotation Correction Set
-            #rotated_img, landmarks = rotate(gray_image, shape[i])
-            #img_data_list.append(rotated_img)
+for label in labels:
+    img_val_list = os.listdir(val_dataset + "/" + label + "/")
+    for img in img_val_list:
+        input_img = cv2.imread(val_dataset + "/" + label + "/" + img)
+        input_img = cv2.resize(input_img, (48, 48))
+        gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+        shape = []
+        bb = []
+        dets = detector(input_img, 1)
+        _, scores, idx = detector.run(input_img, 1, -1)
+        for i, d in enumerate(dets):
+            if d is not None and d.top() >= 0 and d.right() <= input_img.shape[1] and d.bottom() <= input_img.shape[0] and d.left() >= 0:
+                predicted = predictor(input_img, d)
+                shape.append(shape_to_np(predicted))
+                (x, y, w, h) = rect_to_bb(d)
+                bb.append((x, y, w, h))
+                cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            for j in range(0,len(shape)):
+                #Stage 0: Raw Set
+                img_val.append(gray_image)
+                #cv2.imshow("image", gray_image)
+                #print("image: ", img)
+                #cv2.waitKey(0)
 
-            #Stage 2: Cropped Set
-            #cropped_face = cropping(rotated_img, landmarks)
-            #cropped_face = cv2.resize(cropped_face, (96, 96))
-            #img_data_list.append(cropped_face)
+                #Stage 1: Rotation Correction Set
+                #rotated_img, landmarks = rotate(gray_image, shape[i])
+                #img_data_list.append(rotated_img)
 
-            #Stage 3: Intensity Normalization Set
-            #daniel não tem isto
-            #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
-            #img_data_list.append(image_norm)
+                #Stage 2: Cropped Set
+                #cropped_face = cropping(rotated_img, landmarks)
+                #cropped_face = cv2.resize(cropped_face, (96, 96))
+                #img_data_list.append(cropped_face)
 
-            #Stage 4: Histogram Equalization Set
-            #eq_face = hist_eq(cropped_face)
-            #img_data_list.append(eq_face)
+                #Stage 3: Intensity Normalization Set
+                #daniel não tem isto
+                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #img_data_list.append(image_norm)
 
-            #Stage 5: Smoothed Set
-            #filtered_face = smooth(eq_face)
-            #img_data_list.append(filtered_face)
+                #Stage 4: Histogram Equalization Set
+                #eq_face = hist_eq(cropped_face)
+                #img_data_list.append(eq_face)
+
+                #Stage 5: Smoothed Set
+                #filtered_face = smooth(eq_face)
+                #img_data_list.append(filtered_face)
 
         
-img_test = np.array(img_test_list)
-img_test = img_test.astype('float32')
-img_test = img_test/255
-img_test.shape
+img_v = np.array(img_val)
+img_v = img_v.astype('float32')
+img_v = img_v/255
+img_v.shape
+
+for label in labels:
+    img_test_list = os.listdir(test_dataset + "/" + label + "/")
+    for img in img_test_list:
+        input_img = cv2.imread(test_dataset + "/" + label + "/" + img)
+        input_img = cv2.resize(input_img, (48, 48))
+        gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+        shape = []
+        bb = []
+        dets = detector(input_img, 1)
+        _, scores, idx = detector.run(input_img, 1, -1)
+        for i, d in enumerate(dets):
+            if d is not None and d.top() >= 0 and d.right() <= input_img.shape[1] and d.bottom() <= input_img.shape[0] and d.left() >= 0:
+                predicted = predictor(input_img, d)
+                shape.append(shape_to_np(predicted))
+                (x, y, w, h) = rect_to_bb(d)
+                bb.append((x, y, w, h))
+                cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            for j in range(0,len(shape)):
+                #Stage 0: Raw Set
+                img_test.append(gray_image)
+                #cv2.imshow("image", gray_image)
+                #print("image: ", img)
+                #cv2.waitKey(0)
+
+                #Stage 1: Rotation Correction Set
+                #rotated_img, landmarks = rotate(gray_image, shape[i])
+                #img_data_list.append(rotated_img)
+
+                #Stage 2: Cropped Set
+                #cropped_face = cropping(rotated_img, landmarks)
+                #cropped_face = cv2.resize(cropped_face, (96, 96))
+                #img_data_list.append(cropped_face)
+
+                #Stage 3: Intensity Normalization Set
+                #daniel não tem isto
+                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
+                #img_data_list.append(image_norm)
+
+                #Stage 4: Histogram Equalization Set
+                #eq_face = hist_eq(cropped_face)
+                #img_data_list.append(eq_face)
+
+                #Stage 5: Smoothed Set
+                #filtered_face = smooth(eq_face)
+                #img_data_list.append(filtered_face)
+
+        
+img_te = np.array(img_test)
+img_te = img_te.astype('float32')
+img_te = img_te/255
+img_te.shape
 
 
 #define classes and print each class and number of samples

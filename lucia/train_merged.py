@@ -80,12 +80,12 @@ test_dataset = datapath + 'test/'
 val_dataset = datapath + 'val/'
 
 train_datagen = ImageDataGenerator(
-    rotation_range=20,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
+    #rotation_range=20,
+    #width_shift_range=0.1,
+    #height_shift_range=0.1,
     zoom_range=0.2,
-    horizontal_flip=True,
-    vertical_flip=True,
+    #horizontal_flip=True,
+    #vertical_flip=True,
     rescale=1./255,
     brightness_range=[0.5, 1.5], # add brightness augmentation
 )
@@ -337,6 +337,7 @@ model.summary()
 history = model.fit(train_generator, epochs=50, validation_data = val_generator, class_weight=class_weights)
 
 model.save('../../model.h5')
+model.evaluate(test_generator)
 
 # Plot training & validation accuracy values
 plt.plot(history.history['accuracy'])
@@ -344,8 +345,8 @@ plt.plot(history.history['val_accuracy'])
 plt.title('Model accuracy')
 plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-plt.show()
+plt.legend(['train', 'validation'], loc='upper left')
+plt.savefig('accuracy_merged.png')
 
 plt.clf()   # clear figure
 
@@ -355,9 +356,8 @@ plt.plot(history.history['val_loss'])
 plt.title('Model loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-plt.show()
-
+plt.legend(['train', 'validation'], loc='upper left')
+plt.savefig('loss_merged.png')
 plt.clf()   # clear figure
 
 #predict the test set and print the classification report and confusion matrix with number of classes 2 (neutral and not neutral) and target names neutral and not neutral 

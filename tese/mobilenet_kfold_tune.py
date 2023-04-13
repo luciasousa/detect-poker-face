@@ -157,16 +157,58 @@ for fold, (train_df, val_df) in enumerate(k_folds):
         shuffle=False)
 
     # Train the model for this fold
-    model.fit(
+    history = model.fit(
         train_generator,
         steps_per_epoch=len(train_generator),
         epochs=10,
         validation_data=val_generator,
         validation_steps=len(val_generator))
-
+# Train the model for this fold
+    history = model.fit(
+        train_generator,
+        steps_per_epoch=len(train_generator),
+        epochs=5,
+        validation_data=val_generator,
+        validation_steps=len(val_generator))
+    
     # Evaluate the model on the validation set for this fold
     scores = model.evaluate(val_generator, steps=len(val_generator))
     print(f"Validation accuracy for fold {fold+1}: {scores[1]*100}%")
+    print(f"Validation loss for fold {fold+1}: {scores[0]*100}%")
+
+    #train accuracy
+    scores = model.evaluate(train_generator, steps=len(train_generator))
+    print(f"Train accuracy for fold {fold+1}: {scores[1]*100}%")
+    print(f"Train loss for fold {fold+1}: {scores[0]*100}%")
+
+    #graph for the training and validation accuracy
+    #plot the accuracy and loss
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    #save
+    plt.savefig('accuracy_mobilenet_fold_' + fold+1 +'.png')
+
+    #clear plot
+    plt.clf()
+
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+
+    #save
+    plt.savefig('loss_mobilenet_fold_' + fold+1 +'.png')
+
+    #clear plot
+    plt.clf()
+
 
 # Unfreeze all layers of the model
 for layer in base_model.layers:

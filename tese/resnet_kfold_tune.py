@@ -24,14 +24,14 @@ test_dataset = "../../main_dataset/test"
 val_dataset = "../../main_dataset/val"
 
 train_datagen = ImageDataGenerator(
+    #rotation_range=20,
+    #width_shift_range=0.1,
+    #height_shift_range=0.1,
+    zoom_range=0.2,
+    #horizontal_flip=True,
+    #vertical_flip=True,
     rescale=1./255,
-    rotation_range=10, # randomly rotate images by up to 10 degrees
-    zoom_range=0.1, # randomly zoom in by up to 10%
-    width_shift_range=0.1, # randomly shift images horizontally by up to 10%
-    height_shift_range=0.1, # randomly shift images vertically by up to 10%
-    shear_range=0.1, # randomly shear images by up to 10%
-    horizontal_flip=True, # randomly flip images horizontally
-    fill_mode='nearest' # fill any empty pixels with the nearest valid pixel
+    brightness_range=[0.5, 1.5], # add brightness augmentation
 )
 
 val_datagen = ImageDataGenerator(rescale=1./255)
@@ -180,7 +180,23 @@ model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy
 history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
-model.save('../../resnet.h5')
+model.save('../../resnet_kfold.h5')
+
+#evaluate the model
+scores = model.evaluate(test_generator, steps=len(test_generator))
+print(f"Test accuracy: {scores[1]*100}%")
+scores = model.evaluate(test_generator, steps=len(test_generator))
+print(f"Test loss: {scores[0]*100}%")
+
+scores = model.evaluate(val_generator, steps=len(val_generator))
+print(f"Validation accuracy: {scores[1]*100}%")
+scores = model.evaluate(val_generator, steps=len(val_generator))
+print(f"Validation loss: {scores[0]*100}%")
+
+scores = model.evaluate(train_generator, steps=len(train_generator))
+print(f"Train accuracy: {scores[1]*100}%")
+scores = model.evaluate(train_generator, steps=len(train_generator))
+print(f"Train loss: {scores[0]*100}%")
 
 #plot the accuracy and loss
 plt.plot(history.history['accuracy'])

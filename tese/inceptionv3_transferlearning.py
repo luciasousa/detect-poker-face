@@ -9,7 +9,7 @@ from keras.applications.inception_v3 import preprocess_input
 from keras.layers import Input, GlobalAveragePooling2D, Dense, Multiply
 from keras.models import Model
 from keras.models import load_model
-from keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold, train_test_split
 import pandas as pd
@@ -20,11 +20,11 @@ import math
 
 num_classes = 2
 
-path_dataset = "../../../main_dataset/main_dataset/"
+path_dataset = "../../main_dataset/"
 
-train_dataset = "../../../main_dataset/main_dataset/train"
-test_dataset = "../../../main_dataset/main_dataset/test"
-val_dataset = "../../../main_dataset/main_dataset/val"
+train_dataset = "../../main_dataset/train"
+test_dataset = "../../main_dataset/test"
+val_dataset = "../../main_dataset/val"
 
 train_datagen = ImageDataGenerator(
     rescale=1./255,
@@ -93,7 +93,23 @@ model.summary()
 history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
-model.save('./inceptionv3.h5')
+model.save('../../inceptionv3.h5')
+
+#evaluate the model on the test dataset
+scores = model.evaluate(test_generator, steps=len(test_generator))
+print(f"Test accuracy: {scores[1]*100}%")
+scores = model.evaluate(test_generator, steps=len(test_generator))
+print(f"Test loss: {scores[0]*100}%")
+
+scores = model.evaluate(val_generator, steps=len(val_generator))
+print(f"Validation accuracy: {scores[1]*100}%")
+scores = model.evaluate(val_generator, steps=len(val_generator))
+print(f"Validation loss: {scores[0]*100}%")
+
+scores = model.evaluate(train_generator, steps=len(train_generator))
+print(f"Train accuracy: {scores[1]*100}%")
+scores = model.evaluate(train_generator, steps=len(train_generator))
+print(f"Train loss: {scores[0]*100}%")
 
 #evaluate the model on the test dataset
 model.evaluate(test_generator)

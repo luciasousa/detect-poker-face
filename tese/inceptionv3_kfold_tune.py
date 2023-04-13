@@ -19,23 +19,6 @@ import shutil
 import random
 import math
 
-#To Improve
-"""
-Increase the number of epochs during training: 
-The current code only trains the model for a single epoch, 
-which may not be enough for the model to converge to its optimal weights. 
-You can try increasing the number of epochs and monitor the validation accuracy to determine if the model is still improving.
-
-Fine-tune more layers of the pre-trained model: 
-The current code freezes the first 279 layers of the InceptionV3 model, 
-which may not be enough for the model to learn the features necessary for the emotion classification task. 
-You can try unfreezing more layers and fine-tuning the model to improve its performance.
-
-Adjust the learning rate: 
-The learning rate determines the step size taken during training and can have a significant impact on the training process. 
-You can try adjusting the learning rate to find a value that helps the model converge faster and improve its performance.
-"""
-
 num_classes = 2
 
 path_dataset = "../../main_dataset/"
@@ -45,12 +28,12 @@ test_dataset = "../../main_dataset/test"
 val_dataset = "../../main_dataset/val"
 
 train_datagen = ImageDataGenerator(
-    rotation_range=20,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
+    #rotation_range=20,
+    #width_shift_range=0.1,
+    #height_shift_range=0.1,
     zoom_range=0.2,
-    horizontal_flip=True,
-    vertical_flip=True,
+    #horizontal_flip=True,
+    #vertical_flip=True,
     rescale=1./255,
     brightness_range=[0.5, 1.5], # add brightness augmentation
 )
@@ -226,10 +209,25 @@ model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy
 history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
-model.save('../../inceptionv3.h5')
+model.save('../../inceptionv3_kfold.h5')
+
 
 #evaluate the model on the test dataset
-model.evaluate(test_generator)
+scores = model.evaluate(test_generator, steps=len(test_generator))
+print(f"Test accuracy: {scores[1]*100}%")
+scores = model.evaluate(test_generator, steps=len(test_generator))
+print(f"Test loss: {scores[0]*100}%")
+
+scores = model.evaluate(val_generator, steps=len(val_generator))
+print(f"Validation accuracy: {scores[1]*100}%")
+scores = model.evaluate(val_generator, steps=len(val_generator))
+print(f"Validation loss: {scores[0]*100}%")
+
+scores = model.evaluate(train_generator, steps=len(train_generator))
+print(f"Train accuracy: {scores[1]*100}%")
+scores = model.evaluate(train_generator, steps=len(train_generator))
+print(f"Train loss: {scores[0]*100}%")
+
 
 #plot the accuracy and loss
 plt.plot(history.history['accuracy'])

@@ -160,15 +160,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     history = model.fit(
         train_generator,
         steps_per_epoch=len(train_generator),
-        epochs=5,
-        validation_data=val_generator,
-        validation_steps=len(val_generator))
-
-    # Train the model for this fold
-    history = model.fit(
-        train_generator,
-        steps_per_epoch=len(train_generator),
-        epochs=5,
+        epochs=10,
         validation_data=val_generator,
         validation_steps=len(val_generator))
     
@@ -191,7 +183,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
     #save
-    plt.savefig('accuracy_resnet_fold_' + fold+1 +'.png')
+    plt.savefig('accuracy_resnet_fold_' + str(fold+1) +'.png')
 
     #clear plot
     plt.clf()
@@ -205,7 +197,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     plt.legend(['train', 'test'], loc='upper left')
 
     #save
-    plt.savefig('loss_resnet_fold_' + fold+1 +'.png')
+    plt.savefig('loss_resnet_fold_' + str(fold+1) +'.png')
 
     #clear plot
     plt.clf()

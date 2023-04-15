@@ -181,7 +181,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
+    plt.legend(['train', 'validation'], loc='upper left')
     #save
     plt.savefig('accuracy_resnet_fold_' + str(fold+1) +'.png')
 
@@ -194,7 +194,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
+    plt.legend(['train', 'validation'], loc='upper left')
 
     #save
     plt.savefig('loss_resnet_fold_' + str(fold+1) +'.png')
@@ -239,7 +239,7 @@ plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('accuracy_resnet.png')
 
@@ -252,7 +252,7 @@ plt.plot(history.history['val_loss'])
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.legend(['train', 'validation'], loc='upper left')
 
 #save
 plt.savefig('loss_resnet.png')

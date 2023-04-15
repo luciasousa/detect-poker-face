@@ -128,7 +128,7 @@ plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.legend(['train', 'validation'], loc='upper left')
 #save
 plt.savefig('accuracy_mobilenet.png')
 
@@ -141,7 +141,7 @@ plt.plot(history.history['val_loss'])
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.legend(['train', 'validation'], loc='upper left')
 
 #save
 plt.savefig('loss_mobilenet.png')

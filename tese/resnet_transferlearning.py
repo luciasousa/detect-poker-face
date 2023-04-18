@@ -98,7 +98,7 @@ model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy
 model.summary()
 
 # Fine-tune the model on your own dataset
-history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
+history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
 model.save('../../resnet.h5')

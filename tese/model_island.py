@@ -11,7 +11,33 @@ from keras.models import Model
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import dlib
+import tensorflow as tf
+from keras.callbacks import EarlyStopping
 
+
+class IslandLoss(tf.keras.losses.Loss):
+    def __init__(self, num_classes):
+        super(IslandLoss, self).__init__()
+        self.num_classes = num_classes
+
+    def call(self, y_true, y_pred):
+        # Split the predicted embeddings into class-wise groups
+        classwise_embeddings = tf.dynamic_partition(y_pred, tf.argmax(y_true, axis=1), self.num_classes)
+
+        # Calculate the centroids of each class
+        centroids = [tf.reduce_mean(embeddings, axis=0, keepdims=True) for embeddings in classwise_embeddings]
+
+        # Calculate the distance between each embedding and its centroid
+        distances = [tf.norm(embeddings - centroids[i], axis=1) for i, embeddings in enumerate(classwise_embeddings)]
+
+        # Calculate the intra-class variance and inter-class distance
+        intra_class_variance = tf.reduce_sum(distances) / tf.cast(tf.shape(y_pred)[0], tf.float32)
+        inter_class_distance = tf.reduce_mean([tf.norm(centroids[i] - centroids[j]) for i in range (self.num_classes) for j in range(i+1, self.num_classes)])
+
+         # Calculate the loss as the sum of intra-class variance and inter-class distance
+        loss = intra_class_variance + inter_class_distance
+
+        return loss
 
 clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
 
@@ -161,6 +187,8 @@ labels = ['neutral', 'notneutral']
 #and save the images in arrays
 for label in labels:
     img_train_list = os.listdir(train_dataset + "/" + label + "/")
+    img_val_list = os.listdir(val_dataset + "/" + label + "/")
+    img_test_list = os.listdir(test_dataset + "/" + label + "/")
     for img in img_train_list:
         input_img = cv2.imread(train_dataset + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
@@ -205,14 +233,6 @@ for label in labels:
                 #filtered_face = smooth(eq_face)
                 #img_data_list.append(filtered_face)
 
-        
-img_t= np.array(img_train)
-img_t = img_t.astype('float32')
-img_t = img_t/255
-img_t.shape
-
-for label in labels:
-    img_val_list = os.listdir(val_dataset + "/" + label + "/")
     for img in img_val_list:
         input_img = cv2.imread(val_dataset + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
@@ -257,14 +277,6 @@ for label in labels:
                 #filtered_face = smooth(eq_face)
                 #img_data_list.append(filtered_face)
 
-        
-img_v = np.array(img_val)
-img_v = img_v.astype('float32')
-img_v = img_v/255
-img_v.shape
-
-for label in labels:
-    img_test_list = os.listdir(test_dataset + "/" + label + "/")
     for img in img_test_list:
         input_img = cv2.imread(test_dataset + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
@@ -309,6 +321,18 @@ for label in labels:
                 #filtered_face = smooth(eq_face)
                 #img_data_list.append(filtered_face)
 
+        
+img_t= np.array(img_train)
+img_t = img_t.astype('float32')
+img_t = img_t/255
+img_t.shape
+
+        
+img_v = np.array(img_val)
+img_v = img_v.astype('float32')
+img_v = img_v/255
+img_v.shape
+    
         
 img_te = np.array(img_test)
 img_te = img_te.astype('float32')
@@ -364,11 +388,64 @@ model.add(Dense(64, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(num_classes, activation='softmax'))
 
-model.compile(loss='categorical_crossentropy',optimizer='adam', metrics=['accuracy'])
+
+'''
+model = Sequential(  
+    [
+        Input(shape=(48,48,1)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
+        layers.Flatten(),
+        layers.Dropout(0.5),
+        layers.Dense(num_classes, activation="softmax"),
+    ]
+)
+'''
+'''
+# Define the input layer
+input_layer = layers.Input(shape=(48,48,1))
+
+# Add three convolutional layers with PReLU activation and batch normalization
+conv1 = layers.Conv2D(32, kernel_size=(3, 3), activation='linear', padding='same')(input_layer)
+act1 = layers.PReLU()(conv1)
+bn1 = layers.BatchNormalization()(act1)
+
+conv2 = layers.Conv2D(64, kernel_size=(3, 3), activation='linear', padding='same')(bn1)
+act2 = layers.PReLU()(conv2)
+bn2 = layers.BatchNormalization()(act2)
+pool2 = layers.MaxPooling2D(pool_size=(2, 2))(bn2)
+
+conv3 = layers.Conv2D(128, kernel_size=(3, 3), activation='linear', padding='same')(pool2)
+act3 = layers.PReLU()(conv3)
+bn3 = layers.BatchNormalization()(act3)
+pool3 = layers.MaxPooling2D(pool_size=(2, 2))(bn3)
+
+# Add two fully-connected layers
+flatten = layers.Flatten()(pool3)
+fc1 = layers.Dense(256, activation='linear')(flatten)
+act4 = layers.PReLU()(fc1)
+bn4 = layers.BatchNormalization()(act4)
+fc2 = layers.Dense(128, activation='linear')(bn4)
+
+# Calculate the island loss at the second fully-connected layer
+#il_loss = IslandLoss(2)(fc2) # type: ignore
+
+# Add a softmax layer for classification
+softmax = layers.Dense(2, activation='softmax')(fc2)
+
+model = Model(inputs=input_layer, outputs=softmax)
+'''
+model.compile(optimizer='adam', loss=['categorical_crossentropy'], metrics=['accuracy'])
 
 model.summary()
 
-history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights)
+#early_stop = EarlyStopping(monitor='val_loss', patience=3)
+history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
 
 model.save('../../model.h5')
 

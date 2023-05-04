@@ -9,9 +9,10 @@ from keras.applications.inception_v3 import preprocess_input
 from keras.layers import Input, GlobalAveragePooling2D, Dense, Multiply
 from keras.models import Model
 from keras.models import load_model
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD, Adam
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold, train_test_split
+from keras.callbacks import EarlyStopping
 import pandas as pd
 import os
 import shutil
@@ -43,24 +44,24 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 
 train_generator = train_datagen.flow_from_directory(
     train_dataset,
-    target_size=(224, 224),
-    batch_size=1,
+    target_size=(299, 299),
+    batch_size=64,
     class_mode='categorical',
     shuffle=True
 )
 
 val_generator = val_datagen.flow_from_directory(
     val_dataset,
-    target_size=(224, 224),
-    batch_size=1,
+    target_size=(299, 299),
+    batch_size=64,
     class_mode='categorical',
     shuffle=False
 )
 
 test_generator = test_datagen.flow_from_directory(
     test_dataset,
-    target_size=(224, 224),
-    batch_size=1,
+    target_size=(299, 299),
+    batch_size=64,
     class_mode='categorical',
     shuffle=False
 )
@@ -83,15 +84,6 @@ class_weights = {0: weight_for_0, 1: weight_for_1}
 # Load the InceptionV3 model without the top layer
 inception_model = InceptionV3(weights='imagenet', include_top=False)
 
-# Freeze the first 249 layers of the model - correspondent to the early convolutional layers
-'''
-for layer in inception_model.layers[:279]:
-    layer.trainable = False
-
-for layer in inception_model.layers[279:]:
-    layer.trainable = True
-'''
-
 #freeze all layers
 for layer in inception_model.layers:
     layer.trainable = False
@@ -103,12 +95,13 @@ output = Dense(num_classes, activation='softmax')(x)
 model = Model(inputs=inception_model.input, outputs=output)
 
 # Compile the model with a low learning rate
-opt = SGD(lr=0.001, momentum=0.9)
+opt = Adam(lr=0.001)
 model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 
 # Fine-tune the model on your own dataset
-history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
+early_stop = EarlyStopping(monitor='val_loss', patience=3)
+history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights, callbacks=[early_stop])
 
 #save the model
 model.save('../../inceptionv3.h5')

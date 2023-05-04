@@ -185,7 +185,7 @@ for fold, (train_df, val_df) in enumerate(k_folds):
     history = model.fit(
         train_generator,
         steps_per_epoch=len(train_generator),
-        epochs=5,
+        epochs=10,
         validation_data=val_generator,
         validation_steps=len(val_generator))
     
@@ -240,7 +240,7 @@ opt = SGD(lr=0.0001, momentum=0.9)
 model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Fine-tune the model on your own dataset
-history = model.fit(train_generator, epochs=10, validation_data=val_generator, class_weight=class_weights)
+history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights)
 
 #save the model
 model.save('../../inceptionv3_kfold.h5')

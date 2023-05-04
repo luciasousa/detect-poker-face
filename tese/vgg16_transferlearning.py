@@ -143,6 +143,20 @@ plt.savefig('loss_vgg16.png')
 #clear plot
 plt.clf()
 
+# Evaluate the model on the validation set for this fold
+scores = model.evaluate(val_generator, steps=len(val_generator))
+print(f"Validation accuracy: {scores[1]*100}%")
+print(f"Validation loss: {scores[0]*100}%")
+
+#train accuracy
+scores = model.evaluate(train_generator, steps=len(train_generator))
+print(f"Train accuracy: {scores[1]*100}%")
+print(f"Train loss: {scores[0]*100}%")
+
+scores = model.evaluate(test_generator, steps=len(test_generator))
+print(f"Test accuracy: {scores[1]*100}%")
+print(f"Test loss: {scores[0]*100}%")
+
 #predict the test set and print the classification report and confusion matrix with number of classes 2 (neutral and not neutral) and target names neutral and not neutral 
 y_pred = model.predict(test_generator)
 y_pred = np.argmax(y_pred, axis=1)

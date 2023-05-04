@@ -161,6 +161,8 @@ labels = ['neutral', 'notneutral']
 #and save the images in arrays
 for label in labels:
     img_train_list = os.listdir(train_dataset + "/" + label + "/")
+    img_val_list = os.listdir(val_dataset + "/" + label + "/")
+    img_test_list = os.listdir(test_dataset + "/" + label + "/")
     for img in img_train_list:
         input_img = cv2.imread(train_dataset + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
@@ -205,14 +207,6 @@ for label in labels:
                 #filtered_face = smooth(eq_face)
                 #img_data_list.append(filtered_face)
 
-        
-img_t= np.array(img_train)
-img_t = img_t.astype('float32')
-img_t = img_t/255
-img_t.shape
-
-for label in labels:
-    img_val_list = os.listdir(val_dataset + "/" + label + "/")
     for img in img_val_list:
         input_img = cv2.imread(val_dataset + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
@@ -257,14 +251,6 @@ for label in labels:
                 #filtered_face = smooth(eq_face)
                 #img_data_list.append(filtered_face)
 
-        
-img_v = np.array(img_val)
-img_v = img_v.astype('float32')
-img_v = img_v/255
-img_v.shape
-
-for label in labels:
-    img_test_list = os.listdir(test_dataset + "/" + label + "/")
     for img in img_test_list:
         input_img = cv2.imread(test_dataset + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
@@ -310,6 +296,18 @@ for label in labels:
                 #img_data_list.append(filtered_face)
 
         
+img_t= np.array(img_train)
+img_t = img_t.astype('float32')
+img_t = img_t/255
+img_t.shape
+
+        
+img_v = np.array(img_val)
+img_v = img_v.astype('float32')
+img_v = img_v/255
+img_v.shape
+    
+        
 img_te = np.array(img_test)
 img_te = img_te.astype('float32')
 img_te = img_te/255
@@ -349,7 +347,7 @@ print('Weight for class 1: {:.2f}'.format(weight_for_1))
 class_weights = {0: weight_for_0, 1: weight_for_1}
 
 model = Sequential()
-
+'''
 model.add(Conv2D(32, (3, 3), input_shape=(299, 299, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
@@ -363,6 +361,23 @@ model.add(Flatten())
 model.add(Dense(64, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(num_classes, activation='softmax'))
+'''
+
+model = Sequential(  
+    [
+        Input(shape=(48,48,1)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
+        layers.Flatten(),
+        layers.Dropout(0.5),
+        layers.Dense(num_classes, activation="softmax"),
+    ]
+)
 
 model.compile(loss='categorical_crossentropy',optimizer='adam', metrics=['accuracy'])
 

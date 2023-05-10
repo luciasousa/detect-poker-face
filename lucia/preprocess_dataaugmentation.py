@@ -1,4 +1,6 @@
 import os
+import random
+from cv2 import resize
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,97 +8,70 @@ from sklearn.metrics import classification_report, confusion_matrix
 from tensorflow import keras
 from keras import layers, utils, Input, Sequential
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout, GlobalAveragePooling2D
+from keras.layers import Dense, Flatten
 from keras.models import Model
+from keras.utils import plot_model
+from IPython.display import Image
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
-import dlib
-import tensorflow as tf
 from keras.callbacks import EarlyStopping
 
+from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout, GlobalAveragePooling2D
+import dlib
 
-class IslandLoss(tf.keras.losses.Loss):
-    def __init__(self, num_classes):
-        super(IslandLoss, self).__init__()
-        self.num_classes = num_classes
+import random
+import shutil
 
-    def call(self, y_true, y_pred):
-        # Split the predicted embeddings into class-wise groups
-        classwise_embeddings = tf.dynamic_partition(y_pred, tf.argmax(y_true, axis=1), self.num_classes)
 
-        # Calculate the centroids of each class
-        centroids = [tf.reduce_mean(embeddings, axis=0, keepdims=True) for embeddings in classwise_embeddings]
+'''
+# Set the source and destination folder paths
+src_folder_n = '../../main_dataset_copy/train/neutral'
+src_folder_nn = '../../main_dataset_copy/train/notneutral'
+dst_folder_n = '../../main_dataset_copy/val/neutral'
+dst_folder_nn = '../../main_dataset_copy/val/notneutral'
 
-        # Calculate the distance between each embedding and its centroid
-        distances = [tf.norm(embeddings - centroids[i], axis=1) for i, embeddings in enumerate(classwise_embeddings)]
+# Get a list of all image files in the source folder
+image_files_neutral = [f for f in os.listdir(src_folder_n) if f.endswith('.jpg')]
 
-        # Calculate the intra-class variance and inter-class distance
-        intra_class_variance = tf.reduce_sum(distances) / tf.cast(tf.shape(y_pred)[0], tf.float32)
-        inter_class_distance = tf.reduce_mean([tf.norm(centroids[i] - centroids[j]) for i in range (self.num_classes) for j in range(i+1, self.num_classes)])
+image_files_notneutral = [f for f in os.listdir(src_folder_nn) if f.endswith('.jpg')]
 
-         # Calculate the loss as the sum of intra-class variance and inter-class distance
-        loss = intra_class_variance + inter_class_distance
 
-        return loss
+# Shuffle the list of image files
+random.shuffle(image_files_neutral)
+random.shuffle(image_files_notneutral)
+
+# Move the first 1000 images to the destination folder
+for f in image_files_neutral[:1000]:
+    src_file = os.path.join(src_folder_n, f)
+    dst_file = os.path.join(dst_folder_n, f)
+    shutil.move(src_file, dst_file)
+
+for f in image_files_notneutral[:1000]:
+    src_file = os.path.join(src_folder_nn, f)
+    dst_file = os.path.join(dst_folder_nn, f)
+    shutil.move(src_file, dst_file)
+
+print('Done!')
+'''
 
 clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
 
-# Preprocessing block
 def hist_eq(img):
-	#call the .apply method on the CLAHE object to apply histogram equalization
-    if img.dtype != np.uint8:
-        img = img.astype(np.uint8)
     return clahe.apply(img)
 
-def smooth(img):
-	#Gaussian blurring is highly effective in removing Gaussian noise from an image.
-	return cv2.GaussianBlur(img,(3,3),0)
+def shape_to_np(shape):
+	landmarks = np.zeros((68,2), dtype = int)
+	for i in range(0,68):
+		landmarks[i] = (shape.part(i).x, shape.part(i).y)
+	return landmarks
 
-def resize(img):
-	return cv2.resize(img, (32,32))
-
-def to_grayscale(image):
-	return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-# 
 def rect_to_bb(rect):
 	x = rect.left()
 	y = rect.top()
 	w = rect.right() - x
 	h = rect.bottom() - y
-	
 	return (x, y, w, h)
 
-# Convert the facial landmarks dlib format to numpy
-def shape_to_np(shape):
-	# pre-trained facial landmark detector inside the dlib library is used to estimate the location of 68 (x, y)-coordinates
-	# that map to facial structures on the face
-	landmarks = np.zeros((68,2), dtype = int)
-
-	for i in range(0,68):
-		landmarks[i] = (shape.part(i).x, shape.part(i).y)
-
-	return landmarks
-
-
-# Face detection
-def detect_face(image, gray_image):
-	rects = detector(gray_image, 1)
-	shape = []
-	bb = []
-
-	for (z, rect) in enumerate(rects):
-		if rect is not None and rect.top() >= 0 and rect.right() <= gray_image.shape[1] and rect.bottom() <= gray_image.shape[0] and rect.left() >= 0:
-			predicted = predictor(gray_image, rect)
-			shape.append(shape_to_np(predicted))
-			(x, y, w, h) = rect_to_bb(rect)
-			bb.append((x, y, w, h))
-			cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-		#for (x, y) in shape:
-		#	cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
-
-	return shape, bb
-
-# Rotation correction
 def rotate(gray_image, shape):
 	dY = shape[36][1] - shape[45][1]
 	dX = shape[36][0] - shape[45][0]
@@ -114,7 +89,11 @@ def rotate(gray_image, shape):
 
 	return dst, new_shape
 
-# Crop the face by using the facial landmarks of dlib
+def smooth(img):
+	#Gaussian blurring is highly effective in removing Gaussian noise from an image.
+	return cv2.GaussianBlur(img,(3,3),0)
+
+# Crop the face
 def cropping(rotated_img, shape):
 	aux = shape[4] - shape[12]
 	distance = np.linalg.norm(aux)
@@ -124,27 +103,139 @@ def cropping(rotated_img, shape):
 	roi = rotated_img[tl[1]:br[1],tl[0]:br[0]]
 	return roi
 
+detector = dlib.get_frontal_face_detector() #type: ignore
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat') #type: ignore
+
+
+#define datapath
+datapath = '../../main_dataset_copy'
+data_dir_list = os.listdir(datapath)
+sets = sorted(data_dir_list)
+print("list: ", data_dir_list)
+labels = ['neutral', 'notneutral']
+img_data_list = []
+img_names = []
+count_neutral = 0
+count_emotion = 0
+
+'''
+alpha = 0.5 # Contrast control
+beta = 10 # Brightness control
+
+for set in sets:
+    if set == 'train':
+        for label in labels:
+            if label == 'neutral':
+                img_list=os.listdir(datapath+'/'+ set + '/' + label + '/')
+                for img in img_list:
+                    input_img=cv2.imread(datapath + '/'+ set +'/'+ label + '/'+ img )
+                    #convert to gray
+                    input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+                    #change intensity of image
+                    input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
+                    input_img_resize=cv2.resize(input_img,(96,96))
+
+                    #save image to folder
+                    cv2.imwrite(datapath + '/'+ set + '/'+ label + '/' + 'alpha_15_beta_10' + img, input_img_resize)
+
+
+'''
+
+
+'''
+for set in sets: 
+    for label in labels:
+        if label == 'neutral':
+            img_list=os.listdir(datapath+'/'+ set + '/' + label + '/')
+            for img in img_list:
+                input_img=cv2.imread(datapath + '/'+ set + '/'+ label + '/'+ img )
+                #convert to gray
+                input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+                #change intensity of image
+                input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
+                input_img_resize=cv2.resize(input_img,(96,96))
+                #save image to folder
+                cv2.imwrite(datapath + '/'+ set +'/'+ label + '/' +'alpha_05_beta_10'+ img , input_img_resize)
+
+'''
+
+'''
+        if label == 'notneutral':
+            img_list=os.listdir(datapath+'/'+ set + '/' + label + '/')
+            for img in img_list:
+                input_img=cv2.imread(datapath +'/'+ set + '/'+ label + '/'+ img )
+                #convert to gray
+                input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+                #change intensity of image
+                input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
+                input_img_resize=cv2.resize(input_img,(96,96))
+
+                #save image to folder
+                cv2.imwrite(datapath + '/'+ set + '/'+ label + '/' + 'alpha_15_beta_10'+ img, input_img_resize)
+'''
+
+#read all images into array
+'''
+for set in sets:
+    for label in labels:
+        img_list=os.listdir(datapath+ '/'+ set + '/'+ label+'/')
+        print ('Loaded the images of dataset-'+'{}\n'.format(label))
+        for img in img_list:
+            input_img=cv2.imread(datapath +  '/'+ set + '/'+ label + '/'+ img )
+            input_img = cv2.resize(input_img, (96, 96))
+            gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+            img_data_list.append(gray_image)
+            img_names.append(label+'_'+img)
+            if label == 'neutral':
+                count_neutral += 1
+            else:
+                count_emotion += 1
+
+print('count_neutral: ', count_neutral)
+print('count_emotion: ', count_emotion)
+    
+img_data = np.array(img_data_list)
+img_data = img_data.astype('float32')
+img_data = img_data/255
+img_data.shape
+
 num_classes = 2
+num_of_samples = img_data.shape[0]
 
-path_dataset = "../../main_dataset/"
+names = ['neutral','not neutral']
 
-train_dataset = "../../main_dataset/train"
-test_dataset = "../../main_dataset/test"
-val_dataset = "../../main_dataset/val"
+def getLabel(id):
+    return ['neutral','not neutral'][id]
 
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+# convert class labels to on-hot encoding
+labels_int = np.ones((num_of_samples,),dtype='int64')
 
-train_datagen = ImageDataGenerator(
-    #rotation_range=20,
-    #width_shift_range=0.1,
-    #height_shift_range=0.1,
-    zoom_range=0.2,
-    #horizontal_flip=True,
-    #vertical_flip=True,
-    rescale=1./255,
-    brightness_range=[0.5, 1.5], # add brightness augmentation
-)
+#for images in folder 'emotion' label 1 and folder 'neutral' label 0
+count_neutral_b = 0
+count_emotion_b = 0
+for i in range(num_of_samples):
+    name = img_names[i]
+    label = name.split('_')[0]
+    if label == 'neutral':
+        labels_int[i] = 0
+        count_neutral_b += 1
+    else:
+        labels_int[i] = 1
+        count_emotion_b += 1
+    
+
+print('count_neutral_b: ', count_neutral_b)
+print('count_emotion_b: ', count_emotion_b)
+
+y = utils.to_categorical(labels_int, num_classes) 
+print(img_data.shape)
+print(y.shape)
+'''
+train_dataset = "../../main_dataset_copy/train"
+test_dataset = "../../main_dataset_copy/test"
+val_dataset = "../../main_dataset_copy/val"
+
+train_datagen = ImageDataGenerator(rescale=1./255)
 
 val_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -173,6 +264,7 @@ test_generator = test_datagen.flow_from_directory(
     shuffle=False
 )
 
+
 img_train_list = []
 img_val_list = []
 img_test_list = []
@@ -190,7 +282,7 @@ for label in labels:
     img_val_list = os.listdir(val_dataset + "/" + label + "/")
     img_test_list = os.listdir(test_dataset + "/" + label + "/")
     for img in img_train_list:
-        input_img = cv2.imread(train_dataset + "/" + label + "/" + img)
+        input_img = cv2.imread(train_dataset+ "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
         gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         shape = []
@@ -206,7 +298,7 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                img_train.append(gray_image)
+                #img_train.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
@@ -216,25 +308,28 @@ for label in labels:
                 #img_train.append(rotated_img)
 
                 #Stage 2: Cropped Set
-                #cropped_face = cropping(rotated_img, landmarks)
-                #cropped_face = cv2.resize(cropped_face, (96, 96))
-                #img_data_list.append(cropped_face)
-
+                '''
+                if rotated_img.size != 0:
+                    cropped_face = cropping(gray_image, landmarks)
+                    if cropped_face.size != 0:
+                        cropped_face = cv2.resize(cropped_face, (96, 96))
+                        img_train.append(cropped_face)
+                '''
                 #Stage 3: Intensity Normalization Set
                 #daniel não tem isto
-                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
-                #img_data_list.append(image_norm)
+                #image_norm = cv2.normalize(gray_image, None, 0, 255, cv2.NORM_MINMAX)
+                #img_train.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
                 #eq_face = hist_eq(gray_image)
                 #img_train.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                #filtered_face = smooth(gray_image)
-                #img_train.append(filtered_face)
+                filtered_face = smooth(gray_image)
+                img_train.append(filtered_face)
 
     for img in img_val_list:
-        input_img = cv2.imread(val_dataset + "/" + label + "/" + img)
+        input_img = cv2.imread(val_dataset  + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
         gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         shape = []
@@ -250,7 +345,7 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                img_val.append(gray_image)
+                #img_val.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
@@ -260,14 +355,18 @@ for label in labels:
                 #img_val.append(rotated_img)
 
                 #Stage 2: Cropped Set
-                #cropped_face = cropping(rotated_img, landmarks)
-                #cropped_face = cv2.resize(cropped_face, (96, 96))
-                #img_data_list.append(cropped_face)
+                '''
+                if rotated_img.size != 0:
+                    cropped_face = cropping(rotated_img, landmarks)
+                    if cropped_face.size != 0:
+                        cropped_face = cv2.resize(cropped_face, (96, 96))
+                        img_val.append(cropped_face)
+                '''
 
                 #Stage 3: Intensity Normalization Set
                 #daniel não tem isto
-                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
-                #img_data_list.append(image_norm)
+                #image_norm = cv2.normalize(gray_image, None, 0, 255, cv2.NORM_MINMAX)
+                #img_val.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
                 #eq_face = hist_eq(gray_image)
@@ -278,7 +377,7 @@ for label in labels:
                 img_val.append(filtered_face)
 
     for img in img_test_list:
-        input_img = cv2.imread(test_dataset + "/" + label + "/" + img)
+        input_img = cv2.imread(test_dataset  + "/" + label + "/" + img)
         input_img = cv2.resize(input_img, (48, 48))
         gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
         shape = []
@@ -294,7 +393,7 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                img_test.append(gray_image)
+                #img_test.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
@@ -304,14 +403,18 @@ for label in labels:
                 #img_test.append(rotated_img)
 
                 #Stage 2: Cropped Set
-                #cropped_face = cropping(rotated_img, landmarks)
-                #cropped_face = cv2.resize(cropped_face, (96, 96))
-                #img_data_list.append(cropped_face)
+                '''
+                if rotated_img.size != 0:
+                    cropped_face = cropping(rotated_img, landmarks)
+                    if cropped_face.size != 0:
+                        cropped_face = cv2.resize(cropped_face, (96, 96))
+                        img_test.append(cropped_face)
+                '''
 
                 #Stage 3: Intensity Normalization Set
                 #daniel não tem isto
-                #image_norm = cv2.normalize(rotated_img, None, 0, 255, cv2.NORM_MINMAX)
-                #img_data_list.append(image_norm)
+                #image_norm = cv2.normalize(gray_image, None, 0, 255, cv2.NORM_MINMAX)
+                #img_test.append(image_norm)
 
                 #Stage 4: Histogram Equalization Set
                 #eq_face = hist_eq(gray_image)
@@ -339,32 +442,13 @@ img_te = img_te.astype('float32')
 img_te = img_te/255
 img_te.shape
 
+count_neutral=  4101+19634+8725
+count_emotion=  6110+17690+6409
 
-#define classes and print each class and number of samples
-classes = train_generator.class_indices
-print(classes)
+total = count_emotion + count_neutral
 
-#count number of samples in each class
-
-"""
-
-            Neutro (18%)        Não Neutro (82%)
-
-Teste       1367                6110                7477 (20%)
-Treino      4909                21690               26599 (72%)
-Validação   545                 2409                2954 (8%)
-                                                    37030 (100%)
-
-"""
-
-neutral = 6821
-notneutral = 30209
-total = neutral + notneutral
-
-# Scaling by total/2 helps keep the loss to a similar magnitude.
-# The sum of the weights of all examples stays the same.
-weight_for_0 = (1 / neutral) * (total / 2.0)
-weight_for_1 = (1 / notneutral) * (total / 2.0)
+weight_for_0 = (1 / count_neutral) * (total / 2.0)
+weight_for_1 = (1 / count_emotion) * (total / 2.0)
 
 print('Weight for class 0: {:.2f}'.format(weight_for_0))
 print('Weight for class 1: {:.2f}'.format(weight_for_1))
@@ -386,68 +470,18 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
 model.add(Dense(64, activation='relu'))
 model.add(Dropout(0.5))
-model.add(Dense(num_classes, activation='softmax'))
+model.add(Dense(2, activation='softmax'))
 
 
-'''
-model = Sequential(  
-    [
-        Input(shape=(48,48,1)),
-        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(128, kernel_size=(3, 3), activation="relu"),
-        layers.Flatten(),
-        layers.Dropout(0.5),
-        layers.Dense(num_classes, activation="softmax"),
-    ]
-)
-'''
-'''
-# Define the input layer
-input_layer = layers.Input(shape=(48,48,1))
-
-# Add three convolutional layers with PReLU activation and batch normalization
-conv1 = layers.Conv2D(32, kernel_size=(3, 3), activation='linear', padding='same')(input_layer)
-act1 = layers.PReLU()(conv1)
-bn1 = layers.BatchNormalization()(act1)
-
-conv2 = layers.Conv2D(64, kernel_size=(3, 3), activation='linear', padding='same')(bn1)
-act2 = layers.PReLU()(conv2)
-bn2 = layers.BatchNormalization()(act2)
-pool2 = layers.MaxPooling2D(pool_size=(2, 2))(bn2)
-
-conv3 = layers.Conv2D(128, kernel_size=(3, 3), activation='linear', padding='same')(pool2)
-act3 = layers.PReLU()(conv3)
-bn3 = layers.BatchNormalization()(act3)
-pool3 = layers.MaxPooling2D(pool_size=(2, 2))(bn3)
-
-# Add two fully-connected layers
-flatten = layers.Flatten()(pool3)
-fc1 = layers.Dense(256, activation='linear')(flatten)
-act4 = layers.PReLU()(fc1)
-bn4 = layers.BatchNormalization()(act4)
-fc2 = layers.Dense(128, activation='linear')(bn4)
-
-# Calculate the island loss at the second fully-connected layer
-#il_loss = IslandLoss(2)(fc2) # type: ignore
-
-# Add a softmax layer for classification
-softmax = layers.Dense(2, activation='softmax')(fc2)
-
-model = Model(inputs=input_layer, outputs=softmax)
-'''
-model.compile(optimizer='adam', loss=['categorical_crossentropy'], metrics=['accuracy'])
-
+#compile the model
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 model.summary()
 
-#early_stop = EarlyStopping(monitor='val_loss', patience=3)
-history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights)
-
-model.save('../../model.h5')
+#train the model
+early_stop = EarlyStopping(monitor='val_loss', patience=3)
+history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights, callbacks=[early_stop])
+#save the model
+model.save('../../model_preprocess_da.h5')
 
 # Plot training & validation accuracy values
 plt.plot(history.history['accuracy'])
@@ -457,7 +491,7 @@ plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 
-plt.savefig('accuracy_mymodel_stage0.png')
+plt.savefig('accuracy_mymodel_stage1.png')
 
 plt.clf()   # clear figure
 
@@ -469,7 +503,7 @@ plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 
-plt.savefig('loss_mymodel_stage0.png')
+plt.savefig('loss_mymodel_stage1.png')
 
 plt.clf()   # clear figure
 

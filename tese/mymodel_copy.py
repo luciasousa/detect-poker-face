@@ -180,14 +180,14 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                img_train.append(gray_image)
+                #img_train.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
 
                 #Stage 1: Rotation Correction Set
-                #rotated_img, landmarks = rotate(gray_image, shape[i])
-                #img_data_list.append(rotated_img)
+                rotated_img, landmarks = rotate(gray_image, shape[i])
+                img_train.append(rotated_img)
 
                 #Stage 2: Cropped Set
                 #cropped_face = cropping(rotated_img, landmarks)
@@ -224,14 +224,14 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                img_val.append(gray_image)
+                #img_val.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
 
                 #Stage 1: Rotation Correction Set
-                #rotated_img, landmarks = rotate(gray_image, shape[i])
-                #img_data_list.append(rotated_img)
+                rotated_img, landmarks = rotate(gray_image, shape[i])
+                img_val.append(rotated_img)
 
                 #Stage 2: Cropped Set
                 #cropped_face = cropping(rotated_img, landmarks)
@@ -268,14 +268,14 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                img_test.append(gray_image)
+                #img_test.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
 
                 #Stage 1: Rotation Correction Set
-                #rotated_img, landmarks = rotate(gray_image, shape[i])
-                #img_data_list.append(rotated_img)
+                rotated_img, landmarks = rotate(gray_image, shape[i])
+                img_test.append(rotated_img)
 
                 #Stage 2: Cropped Set
                 #cropped_face = cropping(rotated_img, landmarks)
@@ -395,7 +395,7 @@ plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 
-plt.savefig('accuracy_mymodel_stage0.png')
+plt.savefig('accuracy_mymodel_stage1.png')
 
 plt.clf()   # clear figure
 
@@ -407,7 +407,7 @@ plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 
-plt.savefig('loss_mymodel_stage0.png')
+plt.savefig('loss_mymodel_stage1.png')
 
 plt.clf()   # clear figure
 

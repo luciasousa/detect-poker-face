@@ -20,11 +20,12 @@ from keras.callbacks import EarlyStopping
 
 num_classes = 2
 
-path_dataset = "../../main_dataset/"
-train_dataset = "../../main_dataset/train"
-test_dataset = "../../main_dataset/test"
-val_dataset = "../../main_dataset/val"
+path_dataset = "../../main_dataset_copy/"
+train_dataset = "../../main_dataset_copy/train"
+test_dataset = "../../main_dataset_copy/test"
+val_dataset = "../../main_dataset_copy/val"
 
+'''
 train_datagen = ImageDataGenerator(
     #rotation_range=20,
     #width_shift_range=0.1,
@@ -35,6 +36,9 @@ train_datagen = ImageDataGenerator(
     rescale=1./255,
     brightness_range=[0.5, 1.5], # add brightness augmentation
 )
+'''
+
+train_datagen = ImageDataGenerator(rescale=1./255)
 
 val_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -63,14 +67,16 @@ test_generator = test_datagen.flow_from_directory(
     class_mode='categorical',
     shuffle=False
 )
-neutral = 6821
-notneutral = 30209
-total = neutral + notneutral
+
+count_neutral=  4101+19634+8725
+count_emotion=  6110+17690+6409
+
+total = count_emotion + count_neutral
 
 # Scaling by total/2 helps keep the loss to a similar magnitude.
 # The sum of the weights of all examples stays the same.
-weight_for_0 = (1 / neutral) * (total / 2.0)
-weight_for_1 = (1 / notneutral) * (total / 2.0)
+weight_for_0 = (1 / count_neutral) * (total / 2.0)
+weight_for_1 = (1 / count_emotion) * (total / 2.0)
 
 print('Weight for class 0: {:.2f}'.format(weight_for_0))
 print('Weight for class 1: {:.2f}'.format(weight_for_1))

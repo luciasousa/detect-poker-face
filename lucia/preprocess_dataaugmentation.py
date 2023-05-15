@@ -108,7 +108,7 @@ predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat') #type:
 
 
 #define datapath
-datapath = '../../main_dataset_copy'
+datapath = '../../main_dataset'
 data_dir_list = os.listdir(datapath)
 sets = sorted(data_dir_list)
 print("list: ", data_dir_list)
@@ -118,124 +118,23 @@ img_names = []
 count_neutral = 0
 count_emotion = 0
 
-'''
-alpha = 0.5 # Contrast control
-beta = 10 # Brightness control
+train_dataset = "../../main_dataset/train"
+test_dataset = "../../main_dataset/test"
+val_dataset = "../../main_dataset/val"
 
-for set in sets:
-    if set == 'train':
-        for label in labels:
-            if label == 'neutral':
-                img_list=os.listdir(datapath+'/'+ set + '/' + label + '/')
-                for img in img_list:
-                    input_img=cv2.imread(datapath + '/'+ set +'/'+ label + '/'+ img )
-                    #convert to gray
-                    input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-                    #change intensity of image
-                    input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
-                    input_img_resize=cv2.resize(input_img,(96,96))
-
-                    #save image to folder
-                    cv2.imwrite(datapath + '/'+ set + '/'+ label + '/' + 'alpha_15_beta_10' + img, input_img_resize)
+train_datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    vertical_flip=True,
+    rescale=1./255,
+    brightness_range=[0.5, 1.5], # add brightness augmentation
+)
 
 
-'''
-
-
-'''
-for set in sets: 
-    for label in labels:
-        if label == 'neutral':
-            img_list=os.listdir(datapath+'/'+ set + '/' + label + '/')
-            for img in img_list:
-                input_img=cv2.imread(datapath + '/'+ set + '/'+ label + '/'+ img )
-                #convert to gray
-                input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-                #change intensity of image
-                input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
-                input_img_resize=cv2.resize(input_img,(96,96))
-                #save image to folder
-                cv2.imwrite(datapath + '/'+ set +'/'+ label + '/' +'alpha_05_beta_10'+ img , input_img_resize)
-
-'''
-
-'''
-        if label == 'notneutral':
-            img_list=os.listdir(datapath+'/'+ set + '/' + label + '/')
-            for img in img_list:
-                input_img=cv2.imread(datapath +'/'+ set + '/'+ label + '/'+ img )
-                #convert to gray
-                input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-                #change intensity of image
-                input_img = cv2.convertScaleAbs(input_img, alpha=alpha, beta=beta)
-                input_img_resize=cv2.resize(input_img,(96,96))
-
-                #save image to folder
-                cv2.imwrite(datapath + '/'+ set + '/'+ label + '/' + 'alpha_15_beta_10'+ img, input_img_resize)
-'''
-
-#read all images into array
-'''
-for set in sets:
-    for label in labels:
-        img_list=os.listdir(datapath+ '/'+ set + '/'+ label+'/')
-        print ('Loaded the images of dataset-'+'{}\n'.format(label))
-        for img in img_list:
-            input_img=cv2.imread(datapath +  '/'+ set + '/'+ label + '/'+ img )
-            input_img = cv2.resize(input_img, (96, 96))
-            gray_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
-            img_data_list.append(gray_image)
-            img_names.append(label+'_'+img)
-            if label == 'neutral':
-                count_neutral += 1
-            else:
-                count_emotion += 1
-
-print('count_neutral: ', count_neutral)
-print('count_emotion: ', count_emotion)
-    
-img_data = np.array(img_data_list)
-img_data = img_data.astype('float32')
-img_data = img_data/255
-img_data.shape
-
-num_classes = 2
-num_of_samples = img_data.shape[0]
-
-names = ['neutral','not neutral']
-
-def getLabel(id):
-    return ['neutral','not neutral'][id]
-
-# convert class labels to on-hot encoding
-labels_int = np.ones((num_of_samples,),dtype='int64')
-
-#for images in folder 'emotion' label 1 and folder 'neutral' label 0
-count_neutral_b = 0
-count_emotion_b = 0
-for i in range(num_of_samples):
-    name = img_names[i]
-    label = name.split('_')[0]
-    if label == 'neutral':
-        labels_int[i] = 0
-        count_neutral_b += 1
-    else:
-        labels_int[i] = 1
-        count_emotion_b += 1
-    
-
-print('count_neutral_b: ', count_neutral_b)
-print('count_emotion_b: ', count_emotion_b)
-
-y = utils.to_categorical(labels_int, num_classes) 
-print(img_data.shape)
-print(y.shape)
-'''
-train_dataset = "../../main_dataset_copy/train"
-test_dataset = "../../main_dataset_copy/test"
-val_dataset = "../../main_dataset_copy/val"
-
-train_datagen = ImageDataGenerator(rescale=1./255)
+#train_datagen = ImageDataGenerator(rescale=1./255)
 
 val_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -298,7 +197,7 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                #img_train.append(gray_image)
+                img_train.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
@@ -325,8 +224,8 @@ for label in labels:
                 #img_train.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = smooth(gray_image)
-                img_train.append(filtered_face)
+                #filtered_face = smooth(gray_image)
+                #img_train.append(filtered_face)
 
     for img in img_val_list:
         input_img = cv2.imread(val_dataset  + "/" + label + "/" + img)
@@ -345,7 +244,7 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                #img_val.append(gray_image)
+                img_val.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
@@ -373,8 +272,8 @@ for label in labels:
                 #img_val.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = smooth(gray_image)
-                img_val.append(filtered_face)
+                #filtered_face = smooth(gray_image)
+                #img_val.append(filtered_face)
 
     for img in img_test_list:
         input_img = cv2.imread(test_dataset  + "/" + label + "/" + img)
@@ -393,7 +292,7 @@ for label in labels:
                 cv2.rectangle(input_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             for j in range(0,len(shape)):
                 #Stage 0: Raw Set
-                #img_test.append(gray_image)
+                img_test.append(gray_image)
                 #cv2.imshow("image", gray_image)
                 #print("image: ", img)
                 #cv2.waitKey(0)
@@ -421,8 +320,8 @@ for label in labels:
                 #img_test.append(eq_face)
 
                 #Stage 5: Smoothed Set
-                filtered_face = smooth(gray_image)
-                img_test.append(filtered_face)
+                #filtered_face = smooth(gray_image)
+                #img_test.append(filtered_face)
 
         
 img_t= np.array(img_train)
@@ -442,19 +341,9 @@ img_te = img_te.astype('float32')
 img_te = img_te/255
 img_te.shape
 
-count_neutral=  4101+19634+8725
-count_emotion=  6110+17690+6409
-
-total = count_emotion + count_neutral
-
-weight_for_0 = (1 / count_neutral) * (total / 2.0)
-weight_for_1 = (1 / count_emotion) * (total / 2.0)
-
-print('Weight for class 0: {:.2f}'.format(weight_for_0))
-print('Weight for class 1: {:.2f}'.format(weight_for_1))
 
 #higher weight for the class with less samples (neutral class)
-class_weights = {0: weight_for_0, 1: weight_for_1}
+#class_weights = {0: weight_for_0, 1: weight_for_1}
 
 model = Sequential()
 
@@ -478,8 +367,8 @@ model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accur
 model.summary()
 
 #train the model
-early_stop = EarlyStopping(monitor='val_loss', patience=3)
-history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights, callbacks=[early_stop])
+#early_stop = EarlyStopping(monitor='val_loss', patience=3)
+history = model.fit(train_generator, epochs=50, validation_data=val_generator)
 #save the model
 model.save('../../model_preprocess_da.h5')
 
@@ -491,7 +380,7 @@ plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 
-plt.savefig('accuracy_mymodel_stage1.png')
+plt.savefig('accuracy_mymodel.png')
 
 plt.clf()   # clear figure
 
@@ -503,7 +392,7 @@ plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 
-plt.savefig('loss_mymodel_stage1.png')
+plt.savefig('loss_mymodel.png')
 
 plt.clf()   # clear figure
 

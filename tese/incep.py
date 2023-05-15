@@ -6,7 +6,7 @@ import tensorflow as tf
 from keras.applications import InceptionV3
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications.inception_v3 import preprocess_input
-from keras.layers import Input, GlobalAveragePooling2D, Dense, Multiply
+from keras.layers import Input, GlobalAveragePooling2D, Dense, Multiply, Dropout
 from keras.models import Model
 from keras.models import load_model
 from tensorflow.keras.optimizers import SGD, Adam
@@ -21,11 +21,38 @@ import math
 
 num_classes = 2
 
-path_dataset = "../../main_dataset_copy/"
-
+path_dataset = "../../main_dataset_copy"
 train_dataset = "../../main_dataset_copy/train"
 test_dataset = "../../main_dataset_copy/test"
 val_dataset = "../../main_dataset_copy/val"
+
+sets = ['train', 'test', 'val']
+labels = ['neutral', 'notneutral']
+
+
+
+
+for set in sets:
+    for label in labels:
+        if label == 'neutral' and set == 'train':
+            img_list=os.listdir(path_dataset+'/'+ set + '/' + label + '/')
+            for img in img_list:
+                input_img=cv2.imread(path_dataset + '/'+ set +'/'+ label + '/'+ img )
+                #convert to gray
+                input_img=cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+                #change intensity of image
+                input_img_1 = cv2.convertScaleAbs(input_img, alpha=0.6, beta=0.6)
+                input_img_2 = cv2.convertScaleAbs(input_img, alpha=1.5, beta=1.5)
+                input_img_resize_1=cv2.resize(input_img_1,(96,96))
+                input_img_resize_2=cv2.resize(input_img_2,(96,96))
+                
+                #cv2.imshow('img', input_img_resize)
+                #cv2.waitKey(0)
+                #save image to folder
+                cv2.imwrite(path_dataset + '/'+ set + '/'+ label + '/' + 'da_06' + img, input_img_resize_1)
+                cv2.imwrite(path_dataset + '/'+ set + '/'+ label + '/' + 'da_15' + img, input_img_resize_2)
+
+
 
 """
 train_datagen = ImageDataGenerator(
@@ -38,7 +65,7 @@ train_datagen = ImageDataGenerator(
     rescale=1./255,
     brightness_range=[0.5, 1.5], # add brightness augmentation
 )
-"""
+
 
 train_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -71,8 +98,8 @@ test_generator = test_datagen.flow_from_directory(
 )
 
 
-count_neutral=  4101+19634+8725
-count_emotion=  6110+17690+6409
+count_neutral=  1367+14727+545
+count_emotion=  6110+21690+2409
 
 total = count_emotion + count_neutral
 
@@ -90,46 +117,50 @@ class_weights = {0: weight_for_0, 1: weight_for_1}
 # Load the InceptionV3 model without the top layer
 inception_model = InceptionV3(weights='imagenet', include_top=False)
 
+# Determine the number of layers in the InceptionV3 model
+num_layers = len(inception_model.layers)
+
 #freeze all layers
-for layer in inception_model.layers:
-    layer.trainable = False
+for layer in inception_model.layers[num_layers - 4:]:
+    layer.trainable = True
 
 # Add your own top layers to the model
 x = GlobalAveragePooling2D()(inception_model.output)
 x = Dense(128, activation='relu')(x)
+x = Dropout(0.5)(x)  
 output = Dense(num_classes, activation='softmax')(x)
-model = Model(inputs=inception_model.input, outputs=output)
+inception_model = Model(inputs=inception_model.input, outputs=output)
 
 # Compile the model with a low learning rate
 opt = Adam(lr=0.001)
-model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
-model.summary()
+inception_model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+inception_model.summary()
 
 # Fine-tune the model on your own dataset
 early_stop = EarlyStopping(monitor='val_loss', patience=3)
-history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights, callbacks=[early_stop])
+history = inception_model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights, callbacks=[early_stop])
 
 #save the model
-model.save('../../inceptionv3.h5')
+inception_model.save('../../inceptionv3.h5')
 
 #evaluate the model on the test dataset
-scores = model.evaluate(test_generator, steps=len(test_generator))
+scores = inception_model.evaluate(test_generator, steps=len(test_generator))
 print(f"Test accuracy: {scores[1]*100}%")
-scores = model.evaluate(test_generator, steps=len(test_generator))
+scores = inception_model.evaluate(test_generator, steps=len(test_generator))
 print(f"Test loss: {scores[0]*100}%")
 
-scores = model.evaluate(val_generator, steps=len(val_generator))
+scores = inception_model.evaluate(val_generator, steps=len(val_generator))
 print(f"Validation accuracy: {scores[1]*100}%")
-scores = model.evaluate(val_generator, steps=len(val_generator))
+scores = inception_model.evaluate(val_generator, steps=len(val_generator))
 print(f"Validation loss: {scores[0]*100}%")
 
-scores = model.evaluate(train_generator, steps=len(train_generator))
+scores = inception_model.evaluate(train_generator, steps=len(train_generator))
 print(f"Train accuracy: {scores[1]*100}%")
-scores = model.evaluate(train_generator, steps=len(train_generator))
+scores = inception_model.evaluate(train_generator, steps=len(train_generator))
 print(f"Train loss: {scores[0]*100}%")
 
 #evaluate the model on the test dataset
-model.evaluate(test_generator)
+inception_model.evaluate(test_generator)
 
 #plot the accuracy and loss
 plt.plot(history.history['accuracy'])
@@ -158,9 +189,11 @@ plt.savefig('loss_inceptionv3.png')
 plt.clf()
 
 #predict the test set and print the classification report and confusion matrix with number of classes 2 (neutral and not neutral) and target names neutral and not neutral 
-y_pred = model.predict(test_generator)
+y_pred = inception_model.predict(test_generator)
 y_pred = np.argmax(y_pred, axis=1)
 print('Classification Report')
 print(classification_report(test_generator.classes, y_pred, target_names=['neutral', 'notneutral']))
 print('Confusion Matrix')
 print(confusion_matrix(test_generator.classes, y_pred))
+
+"""

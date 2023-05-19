@@ -19,26 +19,24 @@ from keras.callbacks import EarlyStopping
 
 
 num_classes = 2
-path_dataset = "../../main_dataset_copy/"
+path_dataset = "../../main_dataset/"
 
-train_dataset = "../../main_dataset_copy/train"
-test_dataset = "../../main_dataset_copy/test"
-val_dataset = "../../main_dataset_copy/val"
+train_dataset = "../../main_dataset/train"
+test_dataset = "../../main_dataset/test"
+val_dataset = "../../main_dataset/val"
 
-'''
+
 train_datagen = ImageDataGenerator(
-    #rotation_range=20,
-    #width_shift_range=0.1,
-    #height_shift_range=0.1,
+    rotation_range=20,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
     zoom_range=0.2,
-    #horizontal_flip=True,
-    #vertical_flip=True,
+    horizontal_flip=True,
+    vertical_flip=True,
     rescale=1./255,
     brightness_range=[0.5, 1.5], # add brightness augmentation
 )
-'''
 
-train_datagen = ImageDataGenerator(rescale=1./255)
 
 val_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -69,21 +67,18 @@ test_generator = test_datagen.flow_from_directory(
 )
 
 
-count_neutral=  4101+19634+8725
-count_emotion=  6110+17690+6409
+from sklearn.utils import class_weight
 
-total = count_emotion + count_neutral
+# Get the class labels
 
-# Scaling by total/2 helps keep the loss to a similar magnitude.
-# The sum of the weights of all examples stays the same.
-weight_for_0 = (1 / count_neutral) * (total / 2.0)
-weight_for_1 = (1 / count_emotion) * (total / 2.0)
+# Calculate the class weights
+class_weights = class_weight.compute_class_weight(class_weight='balanced', classes=np.unique(train_generator.classes), y=train_generator.classes) 
 
-print('Weight for class 0: {:.2f}'.format(weight_for_0))
-print('Weight for class 1: {:.2f}'.format(weight_for_1))
+# Convert the class weights to a dictionary
+class_weights_dict = dict(enumerate(class_weights))
 
-#higher weight for the class with less samples (neutral class)
-class_weights = {0: weight_for_0, 1: weight_for_1}
+print("class weights: ", class_weights_dict)
+
 
 # Load pre-trained VGG16 model without the top layers
 base_model = ResNet50(weights='imagenet', include_top=False)
@@ -107,7 +102,7 @@ model.summary()
 # Fine-tune the model on your own dataset
 
 early_stop = EarlyStopping(monitor='val_loss', patience=3)
-history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights, callbacks=[early_stop])
+history = model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights_dict, callbacks=[early_stop])
 
 #save the model
 model.save('../../resnet.h5')
@@ -115,17 +110,14 @@ model.save('../../resnet.h5')
 #evaluate the model
 scores = model.evaluate(test_generator, steps=len(test_generator))
 print(f"Test accuracy: {scores[1]*100}%")
-scores = model.evaluate(test_generator, steps=len(test_generator))
 print(f"Test loss: {scores[0]*100}%")
 
 scores = model.evaluate(val_generator, steps=len(val_generator))
 print(f"Validation accuracy: {scores[1]*100}%")
-scores = model.evaluate(val_generator, steps=len(val_generator))
 print(f"Validation loss: {scores[0]*100}%")
 
 scores = model.evaluate(train_generator, steps=len(train_generator))
 print(f"Train accuracy: {scores[1]*100}%")
-scores = model.evaluate(train_generator, steps=len(train_generator))
 print(f"Train loss: {scores[0]*100}%")
 
 #plot the accuracy and loss

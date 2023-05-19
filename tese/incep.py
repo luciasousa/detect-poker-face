@@ -21,17 +21,17 @@ import math
 
 num_classes = 2
 
-path_dataset = "../../main_dataset_copy"
-train_dataset = "../../main_dataset_copy/train"
-test_dataset = "../../main_dataset_copy/test"
-val_dataset = "../../main_dataset_copy/val"
+path_dataset = "../../main_dataset"
+train_dataset = "../../main_dataset/train"
+test_dataset = "../../main_dataset/test"
+val_dataset = "../../main_dataset/val"
 
 sets = ['train', 'test', 'val']
 labels = ['neutral', 'notneutral']
 
 
 
-
+'''
 for set in sets:
     for label in labels:
         if label == 'neutral' and set == 'train':
@@ -52,22 +52,19 @@ for set in sets:
                 cv2.imwrite(path_dataset + '/'+ set + '/'+ label + '/' + 'da_06' + img, input_img_resize_1)
                 cv2.imwrite(path_dataset + '/'+ set + '/'+ label + '/' + 'da_15' + img, input_img_resize_2)
 
+'''
 
 
-"""
 train_datagen = ImageDataGenerator(
-    #rotation_range=20,
-    #width_shift_range=0.1,
-    #height_shift_range=0.1,
+    rotation_range=20,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
     zoom_range=0.2,
-    #horizontal_flip=True,
-    #vertical_flip=True,
+    horizontal_flip=True,
+    vertical_flip=True,
     rescale=1./255,
     brightness_range=[0.5, 1.5], # add brightness augmentation
 )
-
-
-train_datagen = ImageDataGenerator(rescale=1./255)
 
 val_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -98,21 +95,17 @@ test_generator = test_datagen.flow_from_directory(
 )
 
 
-count_neutral=  1367+14727+545
-count_emotion=  6110+21690+2409
+from sklearn.utils import class_weight
 
-total = count_emotion + count_neutral
+# Get the class labels
 
-# Scaling by total/2 helps keep the loss to a similar magnitude.
-# The sum of the weights of all examples stays the same.
-weight_for_0 = (1 / count_neutral) * (total / 2.0)
-weight_for_1 = (1 / count_emotion) * (total / 2.0)
+# Calculate the class weights
+class_weights = class_weight.compute_class_weight(class_weight='balanced', classes=np.unique(train_generator.classes), y=train_generator.classes) 
 
-print('Weight for class 0: {:.2f}'.format(weight_for_0))
-print('Weight for class 1: {:.2f}'.format(weight_for_1))
+# Convert the class weights to a dictionary
+class_weights_dict = dict(enumerate(class_weights))
 
-#higher weight for the class with less samples (neutral class)
-class_weights = {0: weight_for_0, 1: weight_for_1}
+print("class weights: ", class_weights_dict)
 
 # Load the InceptionV3 model without the top layer
 inception_model = InceptionV3(weights='imagenet', include_top=False)
@@ -121,8 +114,8 @@ inception_model = InceptionV3(weights='imagenet', include_top=False)
 num_layers = len(inception_model.layers)
 
 #freeze all layers
-for layer in inception_model.layers[num_layers - 4:]:
-    layer.trainable = True
+for layer in inception_model.layers:
+    layer.trainable = False
 
 # Add your own top layers to the model
 x = GlobalAveragePooling2D()(inception_model.output)
@@ -138,7 +131,7 @@ inception_model.summary()
 
 # Fine-tune the model on your own dataset
 early_stop = EarlyStopping(monitor='val_loss', patience=3)
-history = inception_model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights, callbacks=[early_stop])
+history = inception_model.fit(train_generator, epochs=50, validation_data=val_generator, class_weight=class_weights_dict, callbacks=[early_stop])
 
 #save the model
 inception_model.save('../../inceptionv3.h5')
@@ -146,17 +139,14 @@ inception_model.save('../../inceptionv3.h5')
 #evaluate the model on the test dataset
 scores = inception_model.evaluate(test_generator, steps=len(test_generator))
 print(f"Test accuracy: {scores[1]*100}%")
-scores = inception_model.evaluate(test_generator, steps=len(test_generator))
 print(f"Test loss: {scores[0]*100}%")
 
 scores = inception_model.evaluate(val_generator, steps=len(val_generator))
 print(f"Validation accuracy: {scores[1]*100}%")
-scores = inception_model.evaluate(val_generator, steps=len(val_generator))
 print(f"Validation loss: {scores[0]*100}%")
 
 scores = inception_model.evaluate(train_generator, steps=len(train_generator))
 print(f"Train accuracy: {scores[1]*100}%")
-scores = inception_model.evaluate(train_generator, steps=len(train_generator))
 print(f"Train loss: {scores[0]*100}%")
 
 #evaluate the model on the test dataset
@@ -196,4 +186,3 @@ print(classification_report(test_generator.classes, y_pred, target_names=['neutr
 print('Confusion Matrix')
 print(confusion_matrix(test_generator.classes, y_pred))
 
-"""

@@ -4,6 +4,11 @@ from tensorflow.keras.models import load_model
 import numpy as np
 import dlib
 
+user_input = input("Please enter a string: ")
+
+clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
+
+# Preprocessing block
 def hist_eq(img):
 	#call the .apply method on the CLAHE object to apply histogram equalization
     return clahe.apply(img)
@@ -13,7 +18,9 @@ def smooth(img):
 	return cv2.GaussianBlur(img,(3,3),0)
 
 def resize(img):
-	return cv2.resize(img, (32,32))
+    resized_img = cv2.resize(img, (299, 299))
+    resized_img = np.repeat(resized_img[..., np.newaxis], 3, axis=-1)
+    return resized_img
 
 # Rotation correction
 def rotate(gray_image, shape):
@@ -84,9 +91,8 @@ predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
 video_capture = cv2.VideoCapture(0)
 
-model = load_model('best_model.h5')
-model.summary()
-filtered_face = np.zeros((1, 32, 32, 1))
+model = load_model('../../inceptionv3.h5')
+filtered_face = np.zeros((1, 32, 32, 3))
 
 highest_neutral_confidence = 0.0
 frame_with_highest_confidence = None
@@ -105,7 +111,7 @@ while True:
 			resized_face = resize(filtered_face)
 			face.append(resized_face)
 			face = np.array(face)
-			face = face.reshape(face.shape[0], face.shape[1], face.shape[2], 1)
+			face = face.reshape(face.shape[0], face.shape[1], face.shape[2], 3)
 			face = face.astype('float32') / 255
 			prediction = model.predict(face)
 			emotion = get_emotion(np.argmax(prediction))
@@ -115,6 +121,7 @@ while True:
 				frame_with_highest_confidence = frame.copy()
 			x = bb[i][0]-10
 			y = bb[i][1]+bb[i][2]+20
+			print(f"Emotion: {emotion}, Confidence: {confidence}")
 			cv2.putText(frame, emotion, (x, y), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), thickness=1, lineType=2)
 
 		cv2.imshow('Frame', frame)
@@ -124,7 +131,7 @@ while True:
 
 # Save the frame with the highest confidence as "neutral_frame.jpg"
 if frame_with_highest_confidence is not None:
-    cv2.imwrite("../../my_dataset/neutral_frame.jpg", frame_with_highest_confidence)
+    cv2.imwrite("../../my_dataset/neutral_" + str(int(highest_neutral_confidence*100))+ "_" + str(user_input) + ".jpg", frame_with_highest_confidence)
 
 video_capture.release()
 cv2.destroyAllWindows()

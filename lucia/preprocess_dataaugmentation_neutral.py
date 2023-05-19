@@ -1,3 +1,4 @@
+from itertools import chain
 import os
 import random
 from cv2 import resize
@@ -21,39 +22,6 @@ import dlib
 
 import random
 import shutil
-import numpy as np
-
-
-'''
-# Set the source and destination folder paths
-src_folder_n = '../../main_dataset_copy/train/neutral'
-src_folder_nn = '../../main_dataset_copy/train/notneutral'
-dst_folder_n = '../../main_dataset_copy/val/neutral'
-dst_folder_nn = '../../main_dataset_copy/val/notneutral'
-
-# Get a list of all image files in the source folder
-image_files_neutral = [f for f in os.listdir(src_folder_n) if f.endswith('.jpg')]
-
-image_files_notneutral = [f for f in os.listdir(src_folder_nn) if f.endswith('.jpg')]
-
-
-# Shuffle the list of image files
-random.shuffle(image_files_neutral)
-random.shuffle(image_files_notneutral)
-
-# Move the first 1000 images to the destination folder
-for f in image_files_neutral[:1000]:
-    src_file = os.path.join(src_folder_n, f)
-    dst_file = os.path.join(dst_folder_n, f)
-    shutil.move(src_file, dst_file)
-
-for f in image_files_notneutral[:1000]:
-    src_file = os.path.join(src_folder_nn, f)
-    dst_file = os.path.join(dst_folder_nn, f)
-    shutil.move(src_file, dst_file)
-
-print('Done!')
-'''
 
 clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(2,2))
 
@@ -123,7 +91,8 @@ train_dataset = "../../main_dataset/train"
 test_dataset = "../../main_dataset/test"
 val_dataset = "../../main_dataset/val"
 
-train_datagen = ImageDataGenerator(
+
+train_neutral = ImageDataGenerator(
     rotation_range=20,
     width_shift_range=0.1,
     height_shift_range=0.1,
@@ -133,20 +102,22 @@ train_datagen = ImageDataGenerator(
     rescale=1./255,
     brightness_range=[0.5, 1.5], # add brightness augmentation
 )
+train_emotion= ImageDataGenerator(rescale=1./255)
 
-
-#train_datagen = ImageDataGenerator(rescale=1./255)
 
 val_datagen = ImageDataGenerator(rescale=1./255)
 
 test_datagen = ImageDataGenerator(rescale=1./255)
 
-train_generator = train_datagen.flow_from_directory(
-    train_dataset,
-    target_size=(299, 299),
-    batch_size=32,
-    class_mode='categorical'
-)
+train_generator_neutral= train_neutral.flow_from_directory(directory="../../main_dataset/train/neutral",
+                                                     class_mode="categorical",                                                
+                                                     batch_size=32)
+train_generator_emotion = train_emotion.flow_from_directory(directory="../../main_dataset/train/notneutral",
+                                                     class_mode="categorical",                                                
+                                                     batch_size=32)
+
+
+train_generator = chain(train_generator_neutral, train_generator_emotion)
 
 val_generator = val_datagen.flow_from_directory(
     val_dataset,
@@ -175,7 +146,17 @@ img_test = []
 
 labels = ['neutral', 'notneutral']
 
+from sklearn.utils import class_weight
 
+# Get the class labels
+
+# Calculate the class weights
+class_weights = class_weight.compute_class_weight(class_weight='balanced', classes=np.unique(labels), y=labels) # type: ignore
+
+# Convert the class weights to a dictionary
+class_weights_dict = dict(enumerate(class_weights))
+
+print("class weights: ", class_weights_dict)
 
 #for all images in each folder (train, test, val) apply the same preprocessing
 #and save the images in arrays
@@ -364,18 +345,6 @@ model.add(Dense(64, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(2, activation='softmax'))
 
-
-from sklearn.utils import class_weight
-
-# Get the class labels
-
-# Calculate the class weights
-class_weights = class_weight.compute_class_weight(class_weight='balanced', classes=np.unique(train_generator.classes), y=train_generator.classes) 
-
-# Convert the class weights to a dictionary
-class_weights_dict = dict(enumerate(class_weights))
-
-print("class weights: ", class_weights_dict)
 
 #compile the model
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
